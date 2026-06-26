@@ -43,6 +43,10 @@ const route = useRoute()
 </template>
 
 <style scoped>
+.site-header {
+  width: 100%;
+}
+
 .site-header__utility {
   background: var(--cip-black);
   color: #9ca3af;
@@ -52,23 +56,26 @@ const route = useRoute()
 
 .site-header__utility-inner {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 1rem;
   min-height: 44px;
+  width: 100%;
 }
 
 .site-header__org-line {
   color: #9ca3af;
-  white-space: nowrap;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .site-header__nav {
   display: flex;
   justify-content: center;
   gap: 2rem;
+  flex-shrink: 0;
 }
 
 .site-header__nav-link {
@@ -95,6 +102,7 @@ const route = useRoute()
   color: #d1d5db;
   text-decoration: none;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .site-header__site-link:hover {
@@ -102,7 +110,7 @@ const route = useRoute()
   text-decoration: underline;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 960px) {
   .site-header__utility-inner {
     grid-template-columns: 1fr;
     justify-items: center;

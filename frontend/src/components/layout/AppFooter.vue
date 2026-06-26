@@ -26,6 +26,7 @@
 <style scoped>
 .site-footer {
   margin-top: auto;
+  width: 100%;
   background: var(--cip-gray-900);
   color: #d1d5db;
 }
@@ -68,5 +69,6 @@
   padding: 0.85rem 0;
   font-size: 0.82rem;
   color: #9ca3af;
+  overflow-wrap: anywhere;
 }
 </style>

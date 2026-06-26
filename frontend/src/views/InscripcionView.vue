@@ -457,6 +457,8 @@ function cerrarResultadoModal() {
 <style scoped>
 .inscripcion-layout {
   max-width: 960px;
+  width: 100%;
+  min-width: 0;
 }
 
 .page-head {
@@ -467,7 +469,7 @@ function cerrarResultadoModal() {
 
 .inscripcion-grid {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
   gap: 2rem;
   align-items: start;
 }
@@ -510,6 +512,10 @@ function cerrarResultadoModal() {
 
 .form-actions {
   padding-top: 0.25rem;
+}
+
+.cip-field--file {
+  position: relative;
 }
 
 .cip-field__label {
