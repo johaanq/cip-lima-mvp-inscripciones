@@ -1,33 +1,32 @@
-# MVP Inscripciones — Evento Día del Padre (CIP Lima)
+# MVP Inscripciones — Evento Dia del Padre (CIP Lima)
 
-Monorepo con backend REST, frontend Vue 3 y orquestación Docker para gestionar inscripciones al evento institucional del Consejo Departamental de Lima. Prioricé la correctitud de las reglas de negocio, la consistencia del flujo de datos y el manejo de concurrencia en el cupo de aforo.
+Monorepo con backend REST, frontend Vue 3 y orquestacion Docker para gestionar inscripciones al evento institucional del Consejo Departamental de Lima. El diseño concentra el esfuerzo en reglas de negocio, consistencia del flujo de datos y concurrencia del cupo de aforo.
 
 Repositorio: [github.com/johaanq/cip-lima-mvp-inscripciones](https://github.com/johaanq/cip-lima-mvp-inscripciones)
 
 ---
 
-## Enfoque del reto y criterios de evaluación
+## Alcance y prioridades del MVP
 
-La especificación del reto deja claro que **la prueba prioriza las decisiones técnicas y arquitectónicas del software**, no la estética de la interfaz. El diseño visual puede ser HTML simple o texto plano; el foco está en:
+Sistema minimo viable para inscripciones con validacion externa de colegiados, revision administrativa y control estricto de aforo. Las prioridades de implementacion fueron:
 
-1. **Estabilidad del flujo de datos** (validación → persistencia → transiciones de estado).
-2. **Correcta implementación de las reglas de negocio** (elegibilidad, auto-rechazos, aforo).
-3. **Persistencia formal** (Flyway, esquema versionado, trazabilidad en BD).
-4. **Concurrencia en cupos** (sin sobreventa al aprobar en paralelo).
-5. **Despliegue replicable** con un solo comando (`docker compose up`).
-6. **Historial Git atómico** — el PDF indica que **tiene tanto peso como el código funcional**; no se evalúa un entregable en uno o dos commits masivos.
+1. **Flujo de datos** — validacion, persistencia y transiciones de estado (PENDIENTE, APROBADO, RECHAZADO).
+2. **Reglas de negocio** — elegibilidad del colegiado, auto-rechazos trazables y bloqueo por aforo.
+3. **Persistencia versionada** — esquema con Flyway y constraints en PostgreSQL.
+4. **Concurrencia en cupos** — aprobaciones simultaneas sin sobreventa.
+5. **Despliegue reproducible** — stack completo con `docker compose up`.
+6. **Commits incrementales** — entregas en piezas pequeñas y revisables.
 
-Por eso invertí el tiempo principal en capas del backend, transacciones, ADRs, tests de reglas y compose. El frontend cumple los dos módulos exigidos (portal + dashboard); la UI institucional y el historial por pestañas son mejoras opcionales que **no sustituyen** lo anterior.
+La logica de negocio, transacciones y pruebas unitarias viven en el backend. El frontend cubre el portal de inscripcion y el panel administrador; el historial por pestañas y la carga de imagenes con vista previa son mejoras de usabilidad sobre la interfaz funcional base.
 
-| Prioridad (PDF) | Cómo lo abordé |
-|-----------------|----------------|
-| Reglas de negocio estrictas | `ColegiadoValidationService` con reglas aisladas; auto-rechazos persistidos |
-| Flujo de datos estable | Siempre hay registro en BD (incluso rechazos automáticos) |
-| Concurrencia de aforo | `UPDATE` condicional en la misma transacción que la aprobación |
-| Docker Compose | Postgres + mock + MinIO + backend + frontend en un comando |
-| Commits atómicos | Historial fragmentado por feature (ver sección [Historial Git](#historial-git)) |
-| README técnico | Persistencia, concurrencia, decisiones de stack y ADRs |
-| UI estética | No relevante para la evaluación |
+| Area | Enfoque |
+|------|---------|
+| Reglas de negocio | ColegiadoValidationService con reglas aisladas; auto-rechazos persistidos |
+| Flujo de datos | Toda solicitud enviada queda registrada en BD, incluidos rechazos automaticos |
+| Concurrencia de aforo | UPDATE condicional en la misma transaccion que la aprobacion |
+| Infraestructura | Postgres, mock json-server, MinIO, backend y frontend en un solo compose |
+| Documentacion | ADRs, diagramas C4, persistencia y estrategia de concurrencia |
+| Interfaz | Vue 3: formulario, dashboard, metricas e historial de solicitudes |
 
 ---
 
@@ -46,14 +45,14 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Para reiniciar desde cero (incluye volúmenes de datos):
+Para reiniciar desde cero (incluye volumenes de datos):
 
 ```bash
 docker compose down -v
 docker compose up --build
 ```
 
-El backend espera a que PostgreSQL, MinIO y el mock de colegiados estén saludables antes de arrancar. No hace falta ningún paso manual adicional.
+Docker Compose arranca el backend solo cuando PostgreSQL, MinIO y el mock de colegiados estan **healthy** (healthchecks configurados en `docker-compose.yml`). No hace falta ningun paso manual adicional.
 
 ---
 
@@ -61,14 +60,14 @@ El backend espera a que PostgreSQL, MinIO y el mock de colegiados estén saludab
 
 | Servicio | URL | Notas |
 |----------|-----|-------|
-| Portal de inscripción | http://localhost | Frontend (nginx) |
+| Portal de inscripcion | http://localhost | Frontend (nginx) |
 | Panel administrador | http://localhost/admin/login | Requiere JWT |
 | API REST | http://localhost:8080/api | Backend Spring Boot |
-| Swagger UI | http://localhost:8080/swagger-ui/index.html | Documentación OpenAPI |
-| MinIO consola | http://localhost:9001 | Usuario/clave en `.env.example` |
-| Mock colegiados | Red interna Docker (`colegiados-mock:3001`) | No expuesto al host |
+| Swagger UI | http://localhost:8080/swagger-ui/index.html | Documentacion OpenAPI |
+| MinIO consola | http://localhost:9001 | Usuario/clave en .env.example |
+| Mock colegiados | Red interna Docker (colegiados-mock:3001) | No expuesto al host |
 
-El frontend en nginx proxya `/api` hacia el backend, así que las peticiones del navegador pueden usar rutas relativas `/api/...`.
+El frontend en nginx proxya `/api` hacia el backend, asi que las peticiones del navegador pueden usar rutas relativas `/api/...`.
 
 ---
 
@@ -78,35 +77,35 @@ El frontend en nginx proxya `/api` hacia el backend, así que las peticiones del
 
 | Variable | Valor |
 |----------|-------|
-| Base de datos | `inscripciones` |
-| Usuario | `postgres` |
-| Contraseña | `postgres` |
-| Host (desde host) | `localhost:5432` no expuesto; solo red Docker |
+| Base de datos | inscripciones |
+| Usuario | postgres |
+| Contraseña | postgres |
+| Host (desde host) | localhost:5432 no expuesto; solo red Docker |
 
-### Administrador de la aplicación
+### Administrador de la aplicacion
 
 | Campo | Valor |
 |-------|-------|
-| Usuario | `admin` |
-| Contraseña | `admin123` |
+| Usuario | admin |
+| Contraseña | admin123 |
 
-El usuario admin se crea en PostgreSQL al primer arranque si la tabla `admin_usuario` está vacía (contraseña hasheada con BCrypt). No va en `.env`.
+El usuario admin se crea en PostgreSQL al primer arranque si la tabla admin_usuario esta vacia (contraseña hasheada con BCrypt). No va en `.env`.
 
 ### MinIO
 
 | Campo | Valor |
 |-------|-------|
-| Access key | `minioadmin` |
-| Secret key | `minioadmin` |
-| Bucket | `inscripciones-imagenes` |
+| Access key | minioadmin |
+| Secret key | minioadmin |
+| Bucket | inscripciones-imagenes |
 
-Todas las variables están documentadas en `.env.example`. No commitear el archivo `.env` con secretos reales.
+Todas las variables estan documentadas en `.env.example`. No commitear el archivo `.env` con secretos reales.
 
 ---
 
 ## Arquitectura del sistema
 
-Documenté la arquitectura con diagramas C4 (Structurizr) y secuencia UML (PlantUML). Las capturas están en `docs/diagrams/`.
+La arquitectura se documento con diagramas C4 (Structurizr) y secuencia UML (PlantUML). Las capturas estan en `docs/diagrams/`.
 
 ### Diagrama de contexto
 
@@ -120,7 +119,7 @@ Documenté la arquitectura con diagramas C4 (Structurizr) y secuencia UML (Plant
 
 ![Componentes del backend](docs/diagrams/BackendComponents.png)
 
-Organicé el backend en capas en lugar de DDD completo: el dominio es acotado (inscripción, cupo, elegibilidad) y me interesaba más tener transacciones claras y código fácil de seguir que montar agregados o bounded contexts que no aportaban mucho en este alcance.
+El backend sigue arquitectura en capas: el dominio es acotado (inscripcion, cupo, elegibilidad) y el objetivo fue mantener transacciones claras y codigo legible, sin la complejidad de un DDD completo en este alcance.
 
 Capas: **Controllers + DTOs** → **Services (@Transactional)** → **Domain (entidades JPA, enums)** → **Infraestructura (repos, HTTP client, MinIO)**.
 
@@ -136,75 +135,75 @@ cip-lima-mvp-inscripciones/
 └── README.md
 ```
 
-### Patrones que usé
+### Patrones aplicados
 
-| Patrón | Dónde | Para qué |
+| Patron | Donde | Para que |
 |--------|-------|----------|
-| Layered Architecture | Paquetes `controller`, `service`, `domain`, `repository` | Separar responsabilidades |
-| Repository | `SolicitudRepository`, `EventoConfigRepository` | Abstraer persistencia |
-| Service Layer | `InscripcionService`, `AdminSolicitudService` | Casos de uso y transacciones |
-| DTO | Records en `dto/` | No exponer entidades JPA en la API |
-| Gateway / Client | `ColegiadosApiClient` | Aislar la API externa simulada |
-| Strategy (ligero) | `ColegiadoValidationService` | Reglas de elegibilidad extensibles |
-| Adapter | AWS SDK S3 → MinIO | Mismo patrón que S3 en producción |
+| Layered Architecture | Paquetes controller, service, domain, repository | Separar responsabilidades |
+| Repository | SolicitudRepository, EventoConfigRepository | Abstraer persistencia |
+| Service Layer | InscripcionService, AdminSolicitudService | Casos de uso y transacciones |
+| DTO | Records en dto/ | No exponer entidades JPA en la API |
+| Gateway / Client | ColegiadosApiClient | Aislar la API externa simulada |
+| Strategy (ligero) | ColegiadoValidationService | Reglas de elegibilidad extensibles |
+| Adapter | AWS SDK S3 → MinIO | Mismo patron que S3 en produccion |
 
-### Flujo de inscripción pública
+### Flujo de inscripcion publica
 
-![Secuencia de inscripción](docs/diagrams/sequence-inscripcion.png)
+![Secuencia de inscripcion](docs/diagrams/sequence-inscripcion.png)
 
 1. El frontend consulta `GET /api/evento/estado` para verificar aforo.
-2. El usuario envía `POST /api/inscripciones` (multipart: DNIs, nombre, imagen).
+2. El usuario envia `POST /api/inscripciones` (multipart: DNIs, nombre, imagen).
 3. El backend valida aforo, sube la imagen a MinIO y consulta el mock de colegiados.
-4. `ColegiadoValidationService` evalúa las reglas; resultado `PENDIENTE` o `RECHAZADO` (automático) persistido en PostgreSQL.
+4. ColegiadoValidationService evalua las reglas; resultado PENDIENTE o RECHAZADO (automatico) persistido en PostgreSQL.
 
-### Flujo de aprobación administrativa
+### Flujo de aprobacion administrativa
 
-1. El admin inicia sesión y obtiene JWT.
-2. Consulta métricas y solicitudes pendientes.
-3. Al aprobar, en **una sola transacción**: incremento condicional de cupo + estado `APROBADO` + log de invitación simulado.
-4. Al rechazar, observación obligatoria, estado `RECHAZADO` con `origen_rechazo=ADMIN` + log de alerta simulado.
+1. El admin inicia sesion y obtiene JWT.
+2. Consulta metricas y solicitudes pendientes.
+3. Al aprobar, en **una sola transaccion**: incremento condicional de cupo + estado APROBADO + log de invitacion simulado.
+4. Al rechazar, observacion obligatoria, estado RECHAZADO con origen_rechazo=ADMIN + log de alerta simulado.
 
 ---
 
-## Decisiones técnicas (stack)
+## Decisiones tecnicas (stack)
 
-| Capa | Elección | Motivo |
+| Capa | Eleccion | Motivo |
 |------|----------|--------|
 | Backend | Java 17 + Spring Boot 3.5.16 | Transacciones declarativas, ecosistema maduro, capas claras |
 | Base de datos | PostgreSQL 16 | ACID, constraints, adecuada para concurrencia de cupos |
-| Migraciones | Flyway (`V1__init_schema.sql`) | Esquema versionado desde el arranque |
-| Mock colegiados | json-server en Docker | Lo sugería la especificación; sin código custom |
-| Imágenes | MinIO (API S3) | Object storage on-premise; en producción solo cambia el endpoint |
-| Seguridad admin | Spring Security + JWT stateless | Protección de `/api/admin/**` sin sesión en servidor |
-| Documentación API | SpringDoc OpenAPI 3 | Contrato visible; esquema Bearer JWT |
-| Frontend | Vue 3 + Vite | SPA mínima: formulario + dashboard |
-| Orquestación | Docker Compose | Un comando levanta todo el stack |
+| Migraciones | Flyway (V1__init_schema.sql) | Esquema versionado desde el arranque |
+| Mock colegiados | json-server en Docker | Servicio mock independiente, sin codigo custom en el backend |
+| Imagenes | MinIO (API S3) | Object storage on-premise; en produccion solo cambia el endpoint |
+| Seguridad admin | Spring Security + JWT stateless | Proteccion de /api/admin/** sin sesion en servidor |
+| Documentacion API | SpringDoc OpenAPI 3 | Contrato visible; esquema Bearer JWT |
+| Frontend | Vue 3 + Vite | SPA minima: formulario + dashboard |
+| Orquestacion | Docker Compose | Un comando levanta todo el stack |
 
 ---
 
-## Decisiones arquitectónicas (ADR)
+## Decisiones arquitectonicas (ADR)
 
 ### ADR-001: Capas en lugar de DDD completo
 
-**Contexto:** Dominio pequeño (inscripción, cupo, validación de colegiado) y tiempo acotado.
+**Contexto:** Dominio pequeño (inscripcion, cupo, validacion de colegiado) y tiempo acotado.
 
-**Decisión:** Capas (controller → service → domain/repository → infra) con reglas en servicios y métodos de entidad.
+**Decision:** Capas (controller → service → domain/repository → infra) con reglas en servicios y metodos de entidad.
 
-**Consecuencias:** Menos overhead y código directo. Si el dominio crece, se pueden extraer agregados después.
+**Consecuencias:** Menos overhead y codigo directo. Si el dominio crece, se pueden extraer agregados despues.
 
-### ADR-002: Persistir auto-rechazos como `RECHAZADO`
+### ADR-002: Persistir auto-rechazos como RECHAZADO
 
-**Contexto:** Una inscripción no elegible puede descartarse o persistirse.
+**Contexto:** Una inscripcion no elegible puede descartarse o persistirse.
 
-**Decisión:** Toda solicitud enviada se guarda. Los rechazos automáticos quedan en `RECHAZADO` con `origen_rechazo=AUTOMATICO` y motivo explícito.
+**Decision:** Toda solicitud enviada se guarda. Los rechazos automaticos quedan en RECHAZADO con origen_rechazo=AUTOMATICO y motivo explicito.
 
-**Consecuencias:** Métricas del dashboard coherentes, trazabilidad y flujo de datos estable (siempre hay registro en BD).
+**Consecuencias:** Metricas del dashboard coherentes, trazabilidad y flujo de datos estable (siempre hay registro en BD).
 
 ### ADR-003: Concurrencia de cupos con UPDATE condicional
 
-**Contexto:** Varios administradores podrían aprobar a la vez con cupo limitado (10 plazas).
+**Contexto:** Varios administradores podrian aprobar a la vez con cupo limitado (10 plazas).
 
-**Decisión:** En la misma transacción de aprobación:
+**Decision:** En la misma transaccion de aprobacion:
 
 ```sql
 UPDATE evento_config
@@ -212,33 +211,33 @@ SET cupo_ocupado = cupo_ocupado + 1
 WHERE id = 1 AND cupo_ocupado < cupo_maximo;
 ```
 
-Si `rows affected = 0`, no se aprueba la solicitud (HTTP 409). El cupo solo incrementa al aprobar, nunca al inscribirse.
+Si rows affected = 0, no se aprueba la solicitud (HTTP 409). El cupo solo incrementa al aprobar, nunca al inscribirse.
 
-**Consecuencias:** Evita sobreventa sin bloqueo pesimista explícito; suficiente para el volumen del MVP.
+**Consecuencias:** Evita sobreventa sin bloqueo pesimista explicito; suficiente para el volumen del MVP.
 
-### ADR-004: MinIO para imágenes
+### ADR-004: MinIO para imagenes
 
-**Contexto:** Las imágenes del DNI del menor no deben ir en la BD.
+**Contexto:** Las imagenes del DNI del menor no deben ir en la BD.
 
-**Decisión:** MinIO en Docker con AWS SDK (path-style). La clave del objeto va en `imagen_object_key`.
+**Decision:** MinIO en Docker con AWS SDK (path-style). La clave del objeto va en imagen_object_key.
 
-**Consecuencias:** Mismo patrón que S3 en producción; el bucket se crea al arranque si no existe.
+**Consecuencias:** Mismo patron que S3 en produccion; el bucket se crea al arranque si no existe.
 
 ### ADR-005: JWT en memoria (frontend) y Spring Security (backend)
 
-**Contexto:** El panel admin necesita autenticación stateless.
+**Contexto:** El panel admin necesita autenticacion stateless.
 
-**Decisión:** Login vía `POST /api/auth/login`; token JWT solo en memoria del SPA (no `localStorage`). Filtro JWT en Spring Security para `/api/admin/**`.
+**Decision:** Login via `POST /api/auth/login`; token JWT solo en memoria del SPA (no localStorage). Filtro JWT en Spring Security para `/api/admin/**`.
 
 **Consecuencias:** Menor riesgo de XSS persistente; el token se pierde al cerrar pestaña, aceptable para este MVP.
 
 ### ADR-006: SpringDoc OpenAPI con Bearer auth
 
-**Contexto:** Quería poder probar endpoints admin sin recorrer todo el código.
+**Contexto:** Facilitar pruebas manuales de los endpoints administrativos.
 
-**Decisión:** SpringDoc en `/swagger-ui/index.html` con esquema `bearerAuth` en operaciones administrativas.
+**Decision:** SpringDoc en `/swagger-ui/index.html` con esquema bearerAuth en operaciones administrativas.
 
-**Consecuencias:** Documentación alineada al código y fácil de probar desde el navegador.
+**Consecuencias:** Documentacion alineada al codigo y facil de probar desde el navegador.
 
 ---
 
@@ -246,47 +245,47 @@ Si `rows affected = 0`, no se aprueba la solicitud (HTTP 409). El cupo solo incr
 
 ### Migraciones Flyway
 
-- Ubicación: `backend/src/main/resources/db/migration/`
+- Ubicacion: `backend/src/main/resources/db/migration/`
 - Estrategia JPA: `ddl-auto: validate` (el esquema lo define Flyway, no Hibernate)
 
 ### Tablas
 
-**`evento_config`** (singleton, `id = 1`)
+**evento_config** (singleton, id = 1)
 
-| Columna | Descripción |
+| Columna | Descripcion |
 |---------|-------------|
-| `cupo_maximo` | Aforo estricto (10 en el MVP) |
-| `cupo_ocupado` | Incrementa solo al aprobar |
-| `sede_consejo` | Consejo territorial del evento (`Lima`) |
+| cupo_maximo | Aforo estricto (10 en el MVP) |
+| cupo_ocupado | Incrementa solo al aprobar |
+| sede_consejo | Consejo territorial del evento (Lima) |
 
-**`admin_usuario`**
+**admin_usuario**
 
-| Columna | Descripción |
+| Columna | Descripcion |
 |---------|-------------|
-| `username` | Login del administrador |
-| `password_hash` | Contraseña BCrypt |
-| `activo` | Si el usuario puede autenticarse |
+| username | Login del administrador |
+| password_hash | Contraseña BCrypt |
+| activo | Si el usuario puede autenticarse |
 
-Al primer arranque se inserta `admin` si la tabla está vacía.
+Al primer arranque se inserta admin si la tabla esta vacia.
 
-**`solicitud_inscripcion`**
+**solicitud_inscripcion**
 
-| Columna | Descripción |
+| Columna | Descripcion |
 |---------|-------------|
-| `dni_colegiado`, `nombre_colegiado`, `dni_menor` | Datos del formulario |
-| `imagen_object_key` | Referencia al objeto en MinIO |
-| `estado` | `PENDIENTE`, `APROBADO`, `RECHAZADO` |
-| `motivo_rechazo` | Obligatorio si `RECHAZADO` (CHECK en BD) |
-| `origen_rechazo` | `AUTOMATICO` o `ADMIN` |
-| `created_at`, `updated_at` | Trazabilidad |
+| dni_colegiado, nombre_colegiado, dni_menor | Datos del formulario |
+| imagen_object_key | Referencia al objeto en MinIO |
+| estado | PENDIENTE, APROBADO, RECHAZADO |
+| motivo_rechazo | Obligatorio si RECHAZADO (CHECK en BD) |
+| origen_rechazo | AUTOMATICO o ADMIN |
+| created_at, updated_at | Trazabilidad |
 
-Índices: `estado`, `dni_colegiado`, `created_at DESC`.
+Indices: estado, dni_colegiado, created_at DESC.
 
-### Máquina de estados
+### Maquina de estados
 
 ![Estados de solicitud_inscripcion](docs/diagrams/state-solicitud.png)
 
-Transiciones: inscripción elegible → `PENDIENTE`; auto-rechazo → `RECHAZADO`; admin aprueba → `APROBADO`; admin rechaza → `RECHAZADO` con observación obligatoria.
+Transiciones: inscripcion elegible → PENDIENTE; auto-rechazo → RECHAZADO; admin aprueba → APROBADO; admin rechaza → RECHAZADO con observacion obligatoria.
 
 ---
 
@@ -294,11 +293,11 @@ Transiciones: inscripción elegible → `PENDIENTE`; auto-rechazo → `RECHAZADO
 
 ### Bloqueo en nuevas inscripciones
 
-Antes de registrar, `InscripcionService` consulta `evento_config`. Si `cupo_ocupado >= cupo_maximo`, lanza `AforoCompletoException` (HTTP 409). Las solicitudes en `PENDIENTE` no consumen cupo hasta ser aprobadas.
+Antes de registrar, InscripcionService consulta evento_config. Si cupo_ocupado >= cupo_maximo, lanza AforoCompletoException (HTTP 409). Las solicitudes en PENDIENTE no consumen cupo hasta ser aprobadas.
 
-### Aprobación concurrente
+### Aprobacion concurrente
 
-Pseudocódigo del caso de uso:
+Pseudocodigo del caso de uso:
 
 ```text
 @Transactional
@@ -312,7 +311,7 @@ aprobar(solicitudId):
   notificarInvitacion(solicitud)  // log simulado
 ```
 
-Implementación en `EventoConfigRepository.incrementarCupoSiDisponible`.
+Implementacion en EventoConfigRepository.incrementarCupoSiDisponible.
 
 ---
 
@@ -320,31 +319,31 @@ Implementación en `EventoConfigRepository.incrementarCupoSiDisponible`.
 
 Evaluadas contra la API mock de colegiados al momento de inscribirse:
 
-| Criterio | Condición | Resultado |
+| Criterio | Condicion | Resultado |
 |----------|-----------|-----------|
-| Colegiado registrado | DNI existe en API mock | Si no existe → `RECHAZADO` automático |
-| Estado habilitado | `habilitado: true` | Si false → `RECHAZADO` automático |
-| Pertenencia territorial | `consejo_departamental` = sede del evento (`Lima`) | Si distinto → `RECHAZADO` automático |
-| Restricción laboral | `es_administrativo: false` | Si true → `RECHAZADO` automático |
-| Aforo disponible | `cupo_ocupado < cupo_maximo` | Si lleno → HTTP 409 (no persiste) |
-| Elegible | Pasa todas las reglas | `PENDIENTE` (revisión admin) |
+| Colegiado registrado | DNI existe en API mock | Si no existe → RECHAZADO automatico |
+| Estado habilitado | habilitado: true | Si false → RECHAZADO automatico |
+| Pertenencia territorial | consejo_departamental = sede del evento (Lima) | Si distinto → RECHAZADO automatico |
+| Restriccion laboral | es_administrativo: false | Si true → RECHAZADO automatico |
+| Aforo disponible | cupo_ocupado < cupo_maximo | Si lleno → HTTP 409 (no persiste) |
+| Elegible | Pasa todas las reglas | PENDIENTE (revision admin) |
 
-**Acciones del administrador (solo sobre `PENDIENTE`):**
+**Acciones del administrador (solo sobre PENDIENTE):**
 
-- **Aprobar:** consume cupo, estado `APROBADO`, log de invitación.
-- **Rechazar:** observación obligatoria, estado `RECHAZADO`, `origen_rechazo=ADMIN`, log de alerta.
+- **Aprobar:** consume cupo, estado APROBADO, log de invitacion.
+- **Rechazar:** observacion obligatoria, estado RECHAZADO, origen_rechazo=ADMIN, log de alerta.
 
 ---
 
 ## API mock de colegiados
 
-El servicio `colegiados-mock` (json-server) expone `GET /colegiados?dni={dni}` desde **`mock/db.json`**.
+El servicio colegiados-mock (json-server) expone `GET /colegiados?dni={dni}` desde mock/db.json.
 
-> **Nota:** el archivo `colegiados.json` en la raíz del repo (si existe localmente) **no** lo usa Docker. Los datos autoritativos del mock están en `mock/db.json`. Tras editarlo, json-server con `--watch` debería recargar; en Windows, si no se refleja, ejecuta `docker compose restart colegiados-mock`.
+Los datos del mock estan en mock/db.json. Tras editarlo, json-server con `--watch` recarga el archivo; en Windows, si el cambio no se refleja, reinicia el servicio con `docker compose restart colegiados-mock`.
 
-El backend (`ColegiadosApiClient`) consulta el listado filtrado y toma el registro coincidente. Así no dependo de rutas custom de json-server.
+El backend (ColegiadosApiClient) consulta el listado filtrado por DNI y toma el registro coincidente, sin depender de rutas custom de json-server.
 
-URL interna Docker: `http://colegiados-mock:3001` (variable `COLEGIADOS_API_URL`).
+URL interna Docker: http://colegiados-mock:3001 (variable COLEGIADOS_API_URL).
 
 ---
 
@@ -352,28 +351,28 @@ URL interna Docker: `http://colegiados-mock:3001` (variable `COLEGIADOS_API_URL`
 
 | DNI | Nombre | Resultado esperado al inscribirse | Motivo |
 |-----|--------|-----------------------------------|--------|
-| `12345678` | Juan Perez | `PENDIENTE` | Elegible (Lima, habilitado, no admin) |
-| `87654321` | Maria Lopez | `RECHAZADO` | Personal administrativo |
-| `11223344` | Carlos Ruiz | `RECHAZADO` | No habilitado |
-| `44332211` | Ana Gomez | `RECHAZADO` | Consejo distinto de Lima |
-| `99887766` | Pedro Infante | `PENDIENTE` | Elegible (caso adicional) |
+| 12345678 | Juan Perez | PENDIENTE | Elegible (Lima, habilitado, no admin) |
+| 87654321 | Maria Lopez | RECHAZADO | Personal administrativo |
+| 11223344 | Carlos Ruiz | RECHAZADO | No habilitado |
+| 44332211 | Ana Gomez | RECHAZADO | Consejo distinto de Lima |
+| 99887766 | Pedro Infante | PENDIENTE | Elegible (caso adicional) |
 
-Para probar aforo completo: aprobar 10 solicitudes pendientes; la inscripción 11 debe recibir error de aforo.
+Para probar aforo completo: aprobar 10 solicitudes pendientes; la inscripcion 11 debe recibir error de aforo.
 
 ---
 
 ## Seguridad
 
-| Aspecto | Implementación |
+| Aspecto | Implementacion |
 |---------|----------------|
-| Rutas públicas | `/api/inscripciones`, `/api/evento/**`, `/api/auth/login`, `/api/health`, Swagger |
-| Rutas protegidas | `/api/admin/**` (rol `ADMIN`) |
-| JWT | Configuración en `application.yml` (`app.jwt.secret`, `app.jwt.expiration-ms`) |
-| Usuario admin | Tabla `admin_usuario` en PostgreSQL; seed `admin` / `admin123` al primer arranque |
-| Contraseña admin | BCrypt; validación con Spring Security |
-| CORS | Origen explícito (`CORS_ALLOWED_ORIGINS` en `.env`) |
-| Imágenes | Upload validado (tipo/tamaño); lectura de imagen solo con JWT admin |
-| Secretos de infra | PostgreSQL, MinIO y CORS en `.env`; `.env.example` sin valores de producción |
+| Rutas publicas | /api/inscripciones, /api/evento/**, /api/auth/login, /api/health, Swagger |
+| Rutas protegidas | /api/admin/** (rol ADMIN) |
+| JWT | Configuracion en application.yml (app.jwt.secret, app.jwt.expiration-ms) |
+| Usuario admin | Tabla admin_usuario en PostgreSQL; seed admin / admin123 al primer arranque |
+| Contraseña admin | BCrypt; validacion con Spring Security |
+| CORS | Origen explicito (CORS_ALLOWED_ORIGINS en .env) |
+| Imagenes | Upload validado (tipo/tamano); lectura de imagen solo con JWT admin |
+| Secretos de infra | PostgreSQL, MinIO y CORS en .env; .env.example sin valores de produccion |
 
 ---
 
@@ -381,7 +380,7 @@ Para probar aforo completo: aprobar 10 solicitudes pendientes; la inscripción 1
 
 1. Abrir http://localhost:8080/swagger-ui/index.html
 2. Ejecutar `POST /api/auth/login` con `{ "username": "admin", "password": "admin123" }`
-3. Copiar el `token` de la respuesta
+3. Copiar el token de la respuesta
 4. Pulsar **Authorize** e ingresar: `Bearer <token>`
 5. Probar endpoints bajo tag **Administracion**
 
@@ -389,20 +388,20 @@ Para probar aforo completo: aprobar 10 solicitudes pendientes; la inscripción 1
 
 ## API REST (resumen)
 
-| Método | Ruta | Auth | Descripción |
+| Metodo | Ruta | Auth | Descripcion |
 |--------|------|------|-------------|
-| GET | `/api/health` | No | Health check |
-| GET | `/api/evento/estado` | No | Cupo y aforo |
-| POST | `/api/inscripciones` | No | Registro multipart |
-| GET | `/api/inscripciones/{id}` | No | Consulta de solicitud |
-| POST | `/api/auth/login` | No | Login admin → JWT |
-| GET | `/api/admin/metricas` | JWT | Contadores del dashboard |
-| GET | `/api/admin/solicitudes/pendientes` | JWT | Listado pendientes |
-| GET | `/api/admin/solicitudes/aprobadas` | JWT | Historial aprobadas (extensión) |
-| GET | `/api/admin/solicitudes/rechazadas` | JWT | Historial rechazadas (extensión) |
-| GET | `/api/admin/solicitudes/{id}/imagen` | JWT | Stream imagen MinIO |
-| POST | `/api/admin/solicitudes/{id}/aprobar` | JWT | Aprobar con cupo |
-| POST | `/api/admin/solicitudes/{id}/rechazar` | JWT | Rechazar con observación |
+| GET | /api/health | No | Health check |
+| GET | /api/evento/estado | No | Cupo y aforo |
+| POST | /api/inscripciones | No | Registro multipart |
+| GET | /api/inscripciones/{id} | No | Consulta de solicitud |
+| POST | /api/auth/login | No | Login admin → JWT |
+| GET | /api/admin/metricas | JWT | Contadores del dashboard |
+| GET | /api/admin/solicitudes/pendientes | JWT | Listado pendientes |
+| GET | /api/admin/solicitudes/aprobadas | JWT | Historial de solicitudes aprobadas |
+| GET | /api/admin/solicitudes/rechazadas | JWT | Historial de solicitudes rechazadas |
+| GET | /api/admin/solicitudes/{id}/imagen | JWT | Stream imagen MinIO |
+| POST | /api/admin/solicitudes/{id}/aprobar | JWT | Aprobar con cupo |
+| POST | /api/admin/solicitudes/{id}/rechazar | JWT | Rechazar con observacion |
 
 ---
 
@@ -419,7 +418,7 @@ npm install
 npm run dev
 ```
 
-Requiere PostgreSQL, MinIO y json-server en ejecución con las URLs de `application.yml` / `.env`.
+Requiere PostgreSQL, MinIO y json-server en ejecucion con las URLs de `application.yml` / `.env`.
 
 Tests del backend:
 
@@ -430,76 +429,50 @@ cd backend
 
 ---
 
-## Historial Git
+## Requisitos implementados
 
-Fui commiteando en piezas pequeñas y atómicas, cada una con un propósito claro:
+Capacidades del sistema respecto a los requerimientos funcionales del MVP:
 
-```text
-feat(backend): proyecto Spring Boot inicial...
-feat(db): migración Flyway inicial de tablas
-feat(domain): reglas de elegibilidad del colegiado
-feat(api): endpoint de inscripcion con auto-rechazo
-feat(security): autenticacion JWT con Spring Security
-feat(storage): integracion MinIO...
-feat(admin): metricas, listado y acciones sobre solicitudes
-chore(docker): stack completo con docker compose up
-feat(frontend): portal de inscripcion
-feat(frontend): login, dashboard y diseño institucional
-docs: README con diagramas y fix healthcheck del mock
-refactor(auth): admin en PostgreSQL y JWT en application.yml
-feat(admin): historial con pestañas y mejoras de UI
-feat(frontend): resultado de inscripcion en modal
-```
+| Requisito | Implementacion |
+|-----------|----------------|
+| Portal: DNI, nombre, imagen del menor, validacion contra API externa | InscripcionView.vue, POST /api/inscripciones |
+| Elegible → estado PENDIENTE en BD | InscripcionService, SolicitudInscripcion.crearPendiente() |
+| Dashboard con metricas agregadas | GET /api/admin/metricas, AdminDashboardView.vue |
+| Listado de solicitudes PENDIENTE | GET /api/admin/solicitudes/pendientes |
+| Aprobar: consume cupo e invitacion simulada (log) | AdminSolicitudService.aprobar(), NotificacionService |
+| Rechazar: observacion obligatoria y alerta simulada (log) | RechazarSolicitudRequest, NotificacionService |
+| Aforo maximo estricto; bloqueo de nuevas inscripciones | Cupo 10 en Flyway; HTTP 409 si lleno |
+| Colegiado habilitado (habilitado: true) | ReglaColegiadoHabilitado |
+| Pertenencia al consejo de la sede (Lima) | ReglaConsejoDepartamental |
+| No personal administrativo (es_administrativo: false) | ReglaRestriccionAdministrativa |
+| API mock independiente en Docker | Servicio colegiados-mock, mock/db.json |
+| Persistencia formal (migraciones) | Flyway V1__init_schema.sql, V2__admin_usuario.sql |
+| Arranque con docker compose up | docker-compose.yml (5 servicios) |
 
----
+**Ampliaciones adicionales:** historial de aprobadas y rechazadas, Spring Security con JWT, almacenamiento en MinIO, documentacion OpenAPI, diagramas de arquitectura y tests unitarios de reglas de negocio.
 
-## Cumplimiento de la especificación (PDF)
-
-Checklist alineado al documento *Reto Técnico: Sistema de Inscripción y Validación de Eventos Institucionales (MVP)*:
-
-| Requisito del PDF | Estado | Implementación |
-|-------------------|--------|----------------|
-| Portal: DNI, nombre, imagen DNI menor, validación API externa | Cumplido | `InscripcionView.vue`, `POST /api/inscripciones` |
-| Elegible → estado `PENDIENTE` en BD | Cumplido | `InscripcionService`, `SolicitudInscripcion.crearPendiente()` |
-| Dashboard: métricas (total, aprobados, rechazados, pendientes) | Cumplido | `GET /api/admin/metricas`, `AdminDashboardView.vue` |
-| Listado de solicitudes `PENDIENTE` | Cumplido | `GET /api/admin/solicitudes/pendientes` |
-| Aprobar: consume cupo + invitación simulada (log) | Cumplido | `AdminSolicitudService.aprobar()`, `NotificacionService` |
-| Rechazar: observación obligatoria + alerta simulada (log) | Cumplido | `RechazarSolicitudRequest`, `NotificacionService` |
-| Aforo máximo estricto; bloqueo de nuevas inscripciones | Cumplido | Cupo 10 en Flyway; HTTP 409 si lleno |
-| Regla: `habilitado: true` | Cumplido | `ReglaColegiadoHabilitado` |
-| Regla: consejo = sede del evento (Lima) | Cumplido | `ReglaConsejoDepartamental` |
-| Regla: `es_administrativo: false` | Cumplido | `ReglaRestriccionAdministrativa` |
-| API mock independiente en Docker (json-server) | Cumplido | Servicio `colegiados-mock`, `mock/db.json` |
-| Persistencia formal en ciclo de vida | Cumplido | Flyway `V1__init_schema.sql`, `V2__admin_usuario.sql` |
-| `docker compose up` levanta todo | Cumplido | `docker-compose.yml` (5 servicios) |
-| README: arranque, credenciales, persistencia, concurrencia | Cumplido | Este documento |
-| Historial Git atómico (no entrega monolítica) | Cumplido | 27+ commits en español por feature |
-| UI estética no relevante | Cumplido (prioridad correcta) | Funcionalidad completa; diseño secundario |
-
-**Extensiones opcionales** (no exigidas por el PDF): historial de aprobadas/rechazadas en pestañas, Spring Security + JWT, MinIO, SpringDoc OpenAPI, diagramas C4, tests unitarios.
-
-**Decisiones documentadas fuera del mínimo del PDF:** imágenes en MinIO (no en BD), admin en PostgreSQL con BCrypt, JWT en `application.yml` (secret de desarrollo; en producción usar variable de entorno).
+**Notas de configuracion:** las imagenes no se guardan en PostgreSQL sino en MinIO; el usuario admin se seedea en BD con BCrypt; el secret JWT de desarrollo esta en application.yml (en produccion conviene externalizarlo).
 
 ---
 
 ## Limitaciones y mejoras futuras
 
-- Refresh token y rotación de JWT para sesiones admin más largas
-- Rate limiting en login y en inscripciones públicas
+- Refresh token y rotacion de JWT para sesiones admin mas largas
+- Rate limiting en login y en inscripciones publicas
 - Cola de correo real (SQS + SES o similar) en lugar de logs simulados
-- Validación estricta nombre formulario vs. nombre en API colegiados
-- Tests de integración con Testcontainers (PostgreSQL + MinIO)
+- Validacion estricta nombre formulario vs. nombre en API colegiados
+- Tests de integracion con Testcontainers (PostgreSQL + MinIO)
 - CI con GitHub Actions (build + tests en cada push)
 
 ---
 
 ## Atributos de calidad
 
-| Atributo | Prioridad | Cómo lo abordé |
-|----------|-----------|----------------|
-| Correctitud / reglas de negocio | Crítica | Reglas aisladas, auto-rechazos persistidos, constraints SQL |
-| Consistencia de datos | Crítica | Transacciones `@Transactional`, update condicional de cupo |
-| Trazabilidad | Alta | Flyway, `origen_rechazo`, timestamps, commits atómicos |
+| Atributo | Prioridad | Enfoque |
+|----------|-----------|---------|
+| Correctitud / reglas de negocio | Critica | Reglas aisladas, auto-rechazos persistidos, constraints SQL |
+| Consistencia de datos | Critica | Transacciones @Transactional, update condicional de cupo |
+| Trazabilidad | Alta | Flyway, origen_rechazo, timestamps, commits atomicos |
 | Mantenibilidad | Alta | Capas, ADRs, OpenAPI |
 | Seguridad | Alta | JWT, BCrypt, CORS, uploads validados |
 | Disponibilidad | Media | Healthchecks en Docker Compose |
