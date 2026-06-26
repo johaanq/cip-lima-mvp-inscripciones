@@ -1,5 +1,6 @@
 package pe.org.ciplima.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +16,7 @@ import pe.org.ciplima.backend.service.InscripcionService;
 
 @RestController
 @RequestMapping("/api/inscripciones")
+@Tag(name = "Inscripciones", description = "Registro y consulta de solicitudes publicas")
 public class InscripcionController {
 
     private final InscripcionService inscripcionService;

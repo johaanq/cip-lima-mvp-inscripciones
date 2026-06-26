@@ -1,5 +1,7 @@
 package pe.org.ciplima.backend.controller;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +14,8 @@ import pe.org.ciplima.backend.storage.ArchivoImagenResponse;
 
 @RestController
 @RequestMapping("/api/admin/solicitudes")
+@Tag(name = "Administracion", description = "Operaciones del panel administrador")
+@SecurityRequirement(name = "bearerAuth")
 public class AdminSolicitudController {
 
     private final AdminSolicitudService adminSolicitudService;

@@ -1,5 +1,6 @@
 package pe.org.ciplima.backend.controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,6 +15,7 @@ import pe.org.ciplima.backend.security.JwtService;
 
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Autenticacion", description = "Login del administrador")
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
