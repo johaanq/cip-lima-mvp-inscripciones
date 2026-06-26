@@ -6,6 +6,31 @@ Repositorio: [github.com/johaanq/cip-lima-mvp-inscripciones](https://github.com/
 
 ---
 
+## Enfoque del reto y criterios de evaluación
+
+La especificación del reto deja claro que **la prueba prioriza las decisiones técnicas y arquitectónicas del software**, no la estética de la interfaz. El diseño visual puede ser HTML simple o texto plano; el foco está en:
+
+1. **Estabilidad del flujo de datos** (validación → persistencia → transiciones de estado).
+2. **Correcta implementación de las reglas de negocio** (elegibilidad, auto-rechazos, aforo).
+3. **Persistencia formal** (Flyway, esquema versionado, trazabilidad en BD).
+4. **Concurrencia en cupos** (sin sobreventa al aprobar en paralelo).
+5. **Despliegue replicable** con un solo comando (`docker compose up`).
+6. **Historial Git atómico** — el PDF indica que **tiene tanto peso como el código funcional**; no se evalúa un entregable en uno o dos commits masivos.
+
+Por eso invertí el tiempo principal en capas del backend, transacciones, ADRs, tests de reglas y compose. El frontend cumple los dos módulos exigidos (portal + dashboard); la UI institucional y el historial por pestañas son mejoras opcionales que **no sustituyen** lo anterior.
+
+| Prioridad (PDF) | Cómo lo abordé |
+|-----------------|----------------|
+| Reglas de negocio estrictas | `ColegiadoValidationService` con reglas aisladas; auto-rechazos persistidos |
+| Flujo de datos estable | Siempre hay registro en BD (incluso rechazos automáticos) |
+| Concurrencia de aforo | `UPDATE` condicional en la misma transacción que la aprobación |
+| Docker Compose | Postgres + mock + MinIO + backend + frontend en un comando |
+| Commits atómicos | Historial fragmentado por feature (ver sección [Historial Git](#historial-git)) |
+| README técnico | Persistencia, concurrencia, decisiones de stack y ADRs |
+| UI estética | No relevante para la evaluación |
+
+---
+
 ## Requisitos previos
 
 - Docker Desktop 4.x o superior
@@ -313,7 +338,9 @@ Evaluadas contra la API mock de colegiados al momento de inscribirse:
 
 ## API mock de colegiados
 
-El servicio `colegiados-mock` (json-server) expone `GET /colegiados?dni={dni}` desde `mock/db.json`.
+El servicio `colegiados-mock` (json-server) expone `GET /colegiados?dni={dni}` desde **`mock/db.json`**.
+
+> **Nota:** el archivo `colegiados.json` en la raíz del repo (si existe localmente) **no** lo usa Docker. Los datos autoritativos del mock están en `mock/db.json`. Tras editarlo, json-server con `--watch` debería recargar; en Windows, si no se refleja, ejecuta `docker compose restart colegiados-mock`.
 
 El backend (`ColegiadosApiClient`) consulta el listado filtrado y toma el registro coincidente. Así no dependo de rutas custom de json-server.
 
@@ -371,6 +398,8 @@ Para probar aforo completo: aprobar 10 solicitudes pendientes; la inscripción 1
 | POST | `/api/auth/login` | No | Login admin → JWT |
 | GET | `/api/admin/metricas` | JWT | Contadores del dashboard |
 | GET | `/api/admin/solicitudes/pendientes` | JWT | Listado pendientes |
+| GET | `/api/admin/solicitudes/aprobadas` | JWT | Historial aprobadas (extensión) |
+| GET | `/api/admin/solicitudes/rechazadas` | JWT | Historial rechazadas (extensión) |
 | GET | `/api/admin/solicitudes/{id}/imagen` | JWT | Stream imagen MinIO |
 | POST | `/api/admin/solicitudes/{id}/aprobar` | JWT | Aprobar con cupo |
 | POST | `/api/admin/solicitudes/{id}/rechazar` | JWT | Rechazar con observación |
@@ -416,8 +445,40 @@ feat(admin): metricas, listado y acciones sobre solicitudes
 chore(docker): stack completo con docker compose up
 feat(frontend): portal de inscripcion
 feat(frontend): login, dashboard y diseño institucional
-docs: README con arquitectura, persistencia y concurrencia
+docs: README con diagramas y fix healthcheck del mock
+refactor(auth): admin en PostgreSQL y JWT en application.yml
+feat(admin): historial con pestañas y mejoras de UI
+feat(frontend): resultado de inscripcion en modal
 ```
+
+---
+
+## Cumplimiento de la especificación (PDF)
+
+Checklist alineado al documento *Reto Técnico: Sistema de Inscripción y Validación de Eventos Institucionales (MVP)*:
+
+| Requisito del PDF | Estado | Implementación |
+|-------------------|--------|----------------|
+| Portal: DNI, nombre, imagen DNI menor, validación API externa | Cumplido | `InscripcionView.vue`, `POST /api/inscripciones` |
+| Elegible → estado `PENDIENTE` en BD | Cumplido | `InscripcionService`, `SolicitudInscripcion.crearPendiente()` |
+| Dashboard: métricas (total, aprobados, rechazados, pendientes) | Cumplido | `GET /api/admin/metricas`, `AdminDashboardView.vue` |
+| Listado de solicitudes `PENDIENTE` | Cumplido | `GET /api/admin/solicitudes/pendientes` |
+| Aprobar: consume cupo + invitación simulada (log) | Cumplido | `AdminSolicitudService.aprobar()`, `NotificacionService` |
+| Rechazar: observación obligatoria + alerta simulada (log) | Cumplido | `RechazarSolicitudRequest`, `NotificacionService` |
+| Aforo máximo estricto; bloqueo de nuevas inscripciones | Cumplido | Cupo 10 en Flyway; HTTP 409 si lleno |
+| Regla: `habilitado: true` | Cumplido | `ReglaColegiadoHabilitado` |
+| Regla: consejo = sede del evento (Lima) | Cumplido | `ReglaConsejoDepartamental` |
+| Regla: `es_administrativo: false` | Cumplido | `ReglaRestriccionAdministrativa` |
+| API mock independiente en Docker (json-server) | Cumplido | Servicio `colegiados-mock`, `mock/db.json` |
+| Persistencia formal en ciclo de vida | Cumplido | Flyway `V1__init_schema.sql`, `V2__admin_usuario.sql` |
+| `docker compose up` levanta todo | Cumplido | `docker-compose.yml` (5 servicios) |
+| README: arranque, credenciales, persistencia, concurrencia | Cumplido | Este documento |
+| Historial Git atómico (no entrega monolítica) | Cumplido | 27+ commits en español por feature |
+| UI estética no relevante | Cumplido (prioridad correcta) | Funcionalidad completa; diseño secundario |
+
+**Extensiones opcionales** (no exigidas por el PDF): historial de aprobadas/rechazadas en pestañas, Spring Security + JWT, MinIO, SpringDoc OpenAPI, diagramas C4, tests unitarios.
+
+**Decisiones documentadas fuera del mínimo del PDF:** imágenes en MinIO (no en BD), admin en PostgreSQL con BCrypt, JWT en `application.yml` (secret de desarrollo; en producción usar variable de entorno).
 
 ---
 
