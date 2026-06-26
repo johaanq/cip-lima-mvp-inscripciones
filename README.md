@@ -65,6 +65,8 @@ El frontend en nginx proxya `/api` hacia el backend, así que las peticiones del
 | Usuario | `admin` |
 | Contraseña | `admin123` |
 
+El usuario admin se crea en PostgreSQL al primer arranque si la tabla `admin_usuario` está vacía (contraseña hasheada con BCrypt). No va en `.env`.
+
 ### MinIO
 
 | Campo | Valor |
@@ -232,6 +234,16 @@ Si `rows affected = 0`, no se aprueba la solicitud (HTTP 409). El cupo solo incr
 | `cupo_ocupado` | Incrementa solo al aprobar |
 | `sede_consejo` | Consejo territorial del evento (`Lima`) |
 
+**`admin_usuario`**
+
+| Columna | Descripción |
+|---------|-------------|
+| `username` | Login del administrador |
+| `password_hash` | Contraseña BCrypt |
+| `activo` | Si el usuario puede autenticarse |
+
+Al primer arranque se inserta `admin` si la tabla está vacía.
+
 **`solicitud_inscripcion`**
 
 | Columna | Descripción |
@@ -329,11 +341,12 @@ Para probar aforo completo: aprobar 10 solicitudes pendientes; la inscripción 1
 |---------|----------------|
 | Rutas públicas | `/api/inscripciones`, `/api/evento/**`, `/api/auth/login`, `/api/health`, Swagger |
 | Rutas protegidas | `/api/admin/**` (rol `ADMIN`) |
-| JWT | Firmado con `JWT_SECRET`; expiración configurable (`JWT_EXPIRATION_MS`) |
-| Contraseña admin | Validada con BCrypt vía Spring Security |
-| CORS | Origen explícito (`CORS_ALLOWED_ORIGINS`) |
+| JWT | Configuración en `application.yml` (`app.jwt.secret`, `app.jwt.expiration-ms`) |
+| Usuario admin | Tabla `admin_usuario` en PostgreSQL; seed `admin` / `admin123` al primer arranque |
+| Contraseña admin | BCrypt; validación con Spring Security |
+| CORS | Origen explícito (`CORS_ALLOWED_ORIGINS` en `.env`) |
 | Imágenes | Upload validado (tipo/tamaño); lectura de imagen solo con JWT admin |
-| Secretos | Variables en `.env`; `.env.example` sin valores de producción |
+| Secretos de infra | PostgreSQL, MinIO y CORS en `.env`; `.env.example` sin valores de producción |
 
 ---
 

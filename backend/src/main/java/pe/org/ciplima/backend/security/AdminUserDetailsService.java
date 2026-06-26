@@ -5,32 +5,27 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import pe.org.ciplima.backend.config.AppProperties;
+import pe.org.ciplima.backend.domain.entity.AdminUsuario;
+import pe.org.ciplima.backend.repository.AdminUsuarioRepository;
 
 @Service
 public class AdminUserDetailsService implements UserDetailsService {
 
-    private final AppProperties appProperties;
-    private final PasswordEncoder passwordEncoder;
-    private final String encodedPassword;
+    private final AdminUsuarioRepository adminUsuarioRepository;
 
-    public AdminUserDetailsService(AppProperties appProperties, PasswordEncoder passwordEncoder) {
-        this.appProperties = appProperties;
-        this.passwordEncoder = passwordEncoder;
-        this.encodedPassword = passwordEncoder.encode(appProperties.admin().password());
+    public AdminUserDetailsService(AdminUsuarioRepository adminUsuarioRepository) {
+        this.adminUsuarioRepository = adminUsuarioRepository;
     }
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        if (!appProperties.admin().username().equals(username)) {
-            throw new UsernameNotFoundException("Usuario administrador no encontrado");
-        }
+        AdminUsuario admin = adminUsuarioRepository.findByUsernameAndActivoTrue(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario administrador no encontrado"));
 
         return User.builder()
-                .username(appProperties.admin().username())
-                .password(encodedPassword)
+                .username(admin.getUsername())
+                .password(admin.getPasswordHash())
                 .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))
                 .build();
     }

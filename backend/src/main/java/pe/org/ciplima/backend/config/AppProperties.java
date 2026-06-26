@@ -7,7 +7,6 @@ public record AppProperties(
         EventoProperties evento,
         ColegiadosApiProperties colegiadosApi,
         JwtProperties jwt,
-        AdminProperties admin,
         MinioProperties minio,
         CorsProperties cors
 ) {
@@ -19,9 +18,6 @@ public record AppProperties(
     }
 
     public record JwtProperties(String secret, long expirationMs) {
-    }
-
-    public record AdminProperties(String username, String password) {
     }
 
     public record MinioProperties(String endpoint, String accessKey, String secretKey, String bucket) {

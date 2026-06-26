@@ -20,7 +20,6 @@ class ReglaConsejoDepartamentalTest {
                 new AppProperties.EventoProperties(10, "Lima"),
                 new AppProperties.ColegiadosApiProperties("http://localhost:3001"),
                 new AppProperties.JwtProperties("secret", 3600),
-                new AppProperties.AdminProperties("admin", "admin"),
                 new AppProperties.MinioProperties("http://localhost:9000", "key", "secret", "bucket"),
                 new AppProperties.CorsProperties("http://localhost:5173")
         );

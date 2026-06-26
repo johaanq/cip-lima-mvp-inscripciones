@@ -12,7 +12,6 @@ class JwtServiceTest {
             new AppProperties.EventoProperties(10, "Lima"),
             new AppProperties.ColegiadosApiProperties("http://localhost:3001"),
             new AppProperties.JwtProperties("secreto-jwt-de-prueba-con-longitud-suficiente-256bits", 3600000),
-            new AppProperties.AdminProperties("admin", "admin123"),
             new AppProperties.MinioProperties("http://localhost:9000", "key", "secret", "bucket"),
             new AppProperties.CorsProperties("http://localhost:5173")
     ));
