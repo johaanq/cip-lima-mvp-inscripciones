@@ -1,3 +1,5 @@
+import { getAuthToken } from './authSession'
+
 export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
 
 export class ApiError extends Error {
@@ -9,7 +11,17 @@ export class ApiError extends Error {
 }
 
 export async function apiFetch(path, options = {}) {
-  const response = await fetch(`${apiBaseUrl}${path}`, options)
+  const headers = new Headers(options.headers || {})
+
+  const token = getAuthToken()
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    ...options,
+    headers,
+  })
 
   if (response.ok) {
     if (response.status === 204) {

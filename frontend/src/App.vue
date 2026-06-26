@@ -1,17 +1,27 @@
 <script setup>
 import { RouterView } from 'vue-router'
+import AppFooter from '@/components/layout/AppFooter.vue'
+import AppHeader from '@/components/layout/AppHeader.vue'
 </script>
 
 <template>
   <div class="app-shell">
-    <RouterView />
+    <AppHeader />
+    <main class="app-main">
+      <RouterView />
+    </main>
+    <AppFooter />
   </div>
 </template>
 
 <style scoped>
 .app-shell {
-  width: 100%;
   min-height: 100vh;
-  padding: 2rem 1rem 3rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main {
+  flex: 1;
 }
 </style>

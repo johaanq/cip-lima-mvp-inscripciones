@@ -103,264 +103,222 @@ function reiniciarFormulario() {
 </script>
 
 <template>
-  <section class="inscripcion">
-    <header class="inscripcion__header">
-      <p class="inscripcion__eyebrow">CIP Lima</p>
-      <h1>Inscripción al evento Día del Padre</h1>
-      <p class="inscripcion__descripcion">
-        Complete el formulario para registrar la participación de su hijo menor.
-        La solicitud será revisada por el equipo administrativo del consejo.
-      </p>
-    </header>
+  <section class="cip-page">
+    <div class="cip-container inscripcion-layout">
+      <header class="page-head">
+        <h1 class="cip-page-title">Inscripción — Día del Padre</h1>
+      </header>
 
-    <div v-if="cargandoEvento" class="panel panel--info">
-      Consultando disponibilidad del evento...
-    </div>
-
-    <div v-else-if="errorEvento" class="panel panel--error">
-      {{ errorEvento }}
-      <button type="button" class="btn btn--secondary" @click="cargarEstadoEvento">
-        Reintentar
-      </button>
-    </div>
-
-    <template v-else-if="estadoEvento">
-      <div class="estado-evento">
-        <div>
-          <span class="estado-evento__label">Sede</span>
-          <strong>{{ estadoEvento.sedeConsejo }}</strong>
-        </div>
-        <div>
-          <span class="estado-evento__label">Cupo disponible</span>
-          <strong>{{ estadoEvento.cupoDisponible }} / {{ estadoEvento.cupoMaximo }}</strong>
-        </div>
+      <div v-if="cargandoEvento" class="cip-panel cip-panel--info">
+        Consultando disponibilidad del evento...
       </div>
 
-      <div v-if="!inscripcionesAbiertas" class="panel panel--warning">
-        El evento ha alcanzado su aforo máximo. No se aceptan nuevas inscripciones.
-      </div>
-
-      <form v-else class="formulario" @submit.prevent="enviarInscripcion">
-        <div class="campo">
-          <label for="dniColegiado">DNI del colegiado</label>
-          <input
-            id="dniColegiado"
-            v-model="dniColegiado"
-            type="text"
-            inputmode="numeric"
-            maxlength="8"
-            autocomplete="off"
-            placeholder="12345678"
-            :disabled="!puedeEnviar"
-          />
-        </div>
-
-        <div class="campo">
-          <label for="nombreColegiado">Nombre del colegiado</label>
-          <input
-            id="nombreColegiado"
-            v-model="nombreColegiado"
-            type="text"
-            maxlength="200"
-            autocomplete="name"
-            placeholder="Nombre completo"
-            :disabled="!puedeEnviar"
-          />
-        </div>
-
-        <div class="campo">
-          <label for="dniMenor">DNI del menor</label>
-          <input
-            id="dniMenor"
-            v-model="dniMenor"
-            type="text"
-            inputmode="numeric"
-            maxlength="8"
-            autocomplete="off"
-            placeholder="11223344"
-            :disabled="!puedeEnviar"
-          />
-        </div>
-
-        <div class="campo">
-          <label for="imagen">Imagen del DNI del menor</label>
-          <input
-            id="imagen"
-            type="file"
-            accept="image/jpeg,image/png,image/jpg"
-            :disabled="!puedeEnviar"
-            @change="onArchivoSeleccionado"
-          />
-          <p class="campo__ayuda">Formatos permitidos: JPG o PNG. Tamaño máximo 5 MB.</p>
-        </div>
-
-        <p v-if="errorFormulario" class="formulario__error">{{ errorFormulario }}</p>
-
-        <button type="submit" class="btn btn--primary" :disabled="!puedeEnviar">
-          {{ enviando ? 'Enviando...' : 'Registrar inscripción' }}
-        </button>
-      </form>
-
-      <div
-        v-if="resultado"
-        class="panel"
-        :class="{
-          'panel--success': resultado.estado === 'PENDIENTE' || resultado.estado === 'APROBADO',
-          'panel--error': resultado.estado === 'RECHAZADO',
-        }"
-      >
-        <h2>Resultado de la solicitud</h2>
-        <p><strong>ID:</strong> {{ resultado.id }}</p>
-        <p><strong>Estado:</strong> {{ resultado.estado }}</p>
-        <p>{{ resultado.mensaje }}</p>
-        <p v-if="resultado.motivoRechazo">
-          <strong>Motivo:</strong> {{ resultado.motivoRechazo }}
-        </p>
-        <button type="button" class="btn btn--secondary" @click="reiniciarFormulario">
-          Nueva inscripción
+      <div v-else-if="errorEvento" class="cip-panel cip-panel--error">
+        {{ errorEvento }}
+        <button type="button" class="cip-btn cip-btn--secondary" @click="cargarEstadoEvento">
+          Reintentar
         </button>
       </div>
-    </template>
+
+      <div v-else-if="estadoEvento" class="inscripcion-grid">
+        <aside class="evento-aside">
+          <h2 class="evento-aside__title">Datos del evento</h2>
+          <dl class="evento-aside__list">
+            <div class="evento-aside__row">
+              <dt>Sede</dt>
+              <dd>{{ estadoEvento.sedeConsejo }}</dd>
+            </div>
+            <div class="evento-aside__row">
+              <dt>Cupo disponible</dt>
+              <dd>{{ estadoEvento.cupoDisponible }} de {{ estadoEvento.cupoMaximo }}</dd>
+            </div>
+            <div class="evento-aside__row">
+              <dt>Estado</dt>
+              <dd>{{ inscripcionesAbiertas ? 'Inscripciones abiertas' : 'Aforo completo' }}</dd>
+            </div>
+          </dl>
+        </aside>
+
+        <div class="inscripcion-main">
+          <div v-if="!inscripcionesAbiertas" class="cip-panel cip-panel--warning">
+            El evento ha alcanzado su aforo máximo. No se aceptan nuevas inscripciones.
+          </div>
+
+          <div v-else class="cip-card">
+            <h2 class="form-title">Formulario de inscripción</h2>
+
+            <form class="cip-form" @submit.prevent="enviarInscripcion">
+              <div class="form-row">
+                <div class="cip-field">
+                  <label for="dniColegiado">DNI del colegiado</label>
+                  <input
+                    id="dniColegiado"
+                    v-model="dniColegiado"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="8"
+                    autocomplete="off"
+                    placeholder="12345678"
+                    :disabled="!puedeEnviar"
+                  />
+                </div>
+
+                <div class="cip-field">
+                  <label for="dniMenor">DNI del menor</label>
+                  <input
+                    id="dniMenor"
+                    v-model="dniMenor"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="8"
+                    autocomplete="off"
+                    placeholder="11223344"
+                    :disabled="!puedeEnviar"
+                  />
+                </div>
+              </div>
+
+              <div class="cip-field">
+                <label for="nombreColegiado">Nombre del colegiado</label>
+                <input
+                  id="nombreColegiado"
+                  v-model="nombreColegiado"
+                  type="text"
+                  maxlength="200"
+                  autocomplete="name"
+                  placeholder="Nombre completo"
+                  :disabled="!puedeEnviar"
+                />
+              </div>
+
+              <div class="cip-field">
+                <label for="imagen">Imagen del DNI del menor</label>
+                <input
+                  id="imagen"
+                  type="file"
+                  accept="image/jpeg,image/png,image/jpg"
+                  :disabled="!puedeEnviar"
+                  @change="onArchivoSeleccionado"
+                />
+                <p class="cip-field__help">JPG o PNG, máximo 5 MB.</p>
+              </div>
+
+              <p v-if="errorFormulario" class="cip-form__error">{{ errorFormulario }}</p>
+
+              <div class="form-actions">
+                <button type="submit" class="cip-btn cip-btn--primary" :disabled="!puedeEnviar">
+                  {{ enviando ? 'Enviando...' : 'Registrar inscripción' }}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div
+            v-if="resultado"
+            class="cip-panel"
+            :class="{
+              'cip-panel--success': resultado.estado === 'PENDIENTE' || resultado.estado === 'APROBADO',
+              'cip-panel--error': resultado.estado === 'RECHAZADO',
+            }"
+          >
+            <h2 class="form-title">Resultado</h2>
+            <p><strong>ID:</strong> {{ resultado.id }}</p>
+            <p><strong>Estado:</strong> {{ resultado.estado }}</p>
+            <p>{{ resultado.mensaje }}</p>
+            <p v-if="resultado.motivoRechazo">
+              <strong>Motivo:</strong> {{ resultado.motivoRechazo }}
+            </p>
+            <button type="button" class="cip-btn cip-btn--secondary" @click="reiniciarFormulario">
+              Nueva inscripción
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 </template>
 
 <style scoped>
-.inscripcion {
-  width: min(640px, 100%);
-  margin: 0 auto;
+.inscripcion-layout {
+  max-width: 960px;
 }
 
-.inscripcion__header {
-  margin-bottom: 1.5rem;
+.page-head {
+  margin-bottom: 1.75rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.inscripcion__eyebrow {
+.inscripcion-grid {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.evento-aside {
+  background: var(--cip-white);
+  border: 1px solid var(--color-border);
+  padding: 1.25rem;
+}
+
+.evento-aside__title {
   font-size: 0.85rem;
-  letter-spacing: 0.08em;
+  font-weight: 700;
   text-transform: uppercase;
-  color: hsla(160, 100%, 30%, 1);
-  margin-bottom: 0.5rem;
-}
-
-.inscripcion__header h1 {
-  font-size: 1.75rem;
+  letter-spacing: 0.04em;
   color: var(--color-heading);
-  margin-bottom: 0.75rem;
-}
-
-.inscripcion__descripcion {
-  color: var(--color-text);
-}
-
-.estado-evento {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-background-soft);
-}
-
-.estado-evento__label {
-  display: block;
-  font-size: 0.85rem;
-  margin-bottom: 0.25rem;
-  color: var(--color-text);
-}
-
-.formulario {
-  display: grid;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.campo {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.campo label {
-  font-weight: 600;
-  color: var(--color-heading);
-}
-
-.campo input[type='text'],
-.campo input[type='file'] {
-  width: 100%;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-background);
-  color: var(--color-text);
-}
-
-.campo__ayuda {
-  font-size: 0.85rem;
-  color: var(--color-text);
-}
-
-.formulario__error {
-  color: #b42318;
-}
-
-.panel {
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
   margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.panel h2 {
-  font-size: 1.1rem;
-  margin-bottom: 0.75rem;
+.evento-aside__list {
+  display: grid;
+  gap: 0.85rem;
 }
 
-.panel--info {
-  background: var(--color-background-soft);
+.evento-aside__row dt {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.15rem;
 }
 
-.panel--warning {
-  background: #fff7ed;
-  border-color: #fdba74;
-  color: #9a3412;
-}
-
-.panel--success {
-  background: #ecfdf3;
-  border-color: #86efac;
-  color: #166534;
-}
-
-.panel--error {
-  background: #fef2f2;
-  border-color: #fca5a5;
-  color: #991b1b;
-}
-
-.btn {
-  margin-top: 0.75rem;
-  padding: 0.65rem 1rem;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  cursor: pointer;
+.evento-aside__row dd {
+  font-size: 0.95rem;
   font-weight: 600;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn--primary {
-  background: hsla(160, 100%, 37%, 1);
-  color: #fff;
-}
-
-.btn--secondary {
-  background: transparent;
-  border-color: var(--color-border);
   color: var(--color-heading);
+}
+
+.inscripcion-main {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-heading);
+  margin-bottom: 1.25rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-actions {
+  padding-top: 0.25rem;
+}
+
+@media (max-width: 720px) {
+  .inscripcion-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
