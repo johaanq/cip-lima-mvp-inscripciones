@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ApiError } from '@/services/api'
 import { obtenerEstadoEvento, registrarInscripcion } from '@/services/inscripcionService'
 
@@ -15,6 +15,7 @@ const imagen = ref(null)
 const enviando = ref(false)
 const errorFormulario = ref('')
 const resultado = ref(null)
+const resultadoModalRef = ref(null)
 
 const inscripcionesAbiertas = computed(() => estadoEvento.value?.inscripcionesAbiertas ?? false)
 
@@ -24,8 +25,31 @@ const puedeEnviar = computed(() =>
   !cargandoEvento.value
 )
 
+const resultadoEsRechazo = computed(() => resultado.value?.estado === 'RECHAZADO')
+
+function onEscapeKey(event) {
+  if (event.key === 'Escape' && resultado.value) {
+    cerrarResultadoModal()
+  }
+}
+
+watch(resultado, (valor) => {
+  document.body.style.overflow = valor ? 'hidden' : ''
+  if (valor) {
+    document.addEventListener('keydown', onEscapeKey)
+    requestAnimationFrame(() => resultadoModalRef.value?.focus())
+  } else {
+    document.removeEventListener('keydown', onEscapeKey)
+  }
+})
+
 onMounted(async () => {
   await cargarEstadoEvento()
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onEscapeKey)
+  document.body.style.overflow = ''
 })
 
 async function cargarEstadoEvento() {
@@ -99,6 +123,10 @@ function reiniciarFormulario() {
   imagen.value = null
   errorFormulario.value = ''
   resultado.value = null
+}
+
+function cerrarResultadoModal() {
+  reiniciarFormulario()
 }
 </script>
 
@@ -212,41 +240,56 @@ function reiniciarFormulario() {
               </div>
             </form>
           </section>
+        </div>
+      </div>
 
-          <section
-            v-if="resultado"
-            class="cip-section resultado-block"
-            :class="{
-              'resultado-block--ok': resultado.estado === 'PENDIENTE' || resultado.estado === 'APROBADO',
-              'resultado-block--rechazado': resultado.estado === 'RECHAZADO',
-            }"
+      <Teleport to="body">
+        <div
+          v-if="resultado"
+          ref="resultadoModalRef"
+          class="resultado-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="resultado-modal-title"
+          tabindex="-1"
+        >
+          <button
+            type="button"
+            class="resultado-modal__backdrop"
+            aria-label="Cerrar resultado"
+            @click="cerrarResultadoModal"
+          />
+
+          <div
+            class="resultado-modal__panel"
+            :class="{ 'resultado-modal__panel--rechazado': resultadoEsRechazo }"
           >
-            <div class="resultado-block__head">
-              <h2 class="cip-section__title">Resultado</h2>
-              <span class="resultado-block__estado">{{ resultado.estado }}</span>
+            <div class="resultado-modal__head">
+              <h2 id="resultado-modal-title" class="resultado-modal__title">Resultado</h2>
+              <span class="resultado-modal__estado">{{ resultado.estado }}</span>
             </div>
 
-            <dl class="resultado-block__meta">
-              <div class="resultado-block__row">
+            <dl class="resultado-modal__meta">
+              <div class="resultado-modal__row">
                 <dt>ID</dt>
                 <dd>{{ resultado.id }}</dd>
               </div>
-              <div class="resultado-block__row">
+              <div class="resultado-modal__row">
                 <dt>Mensaje</dt>
                 <dd>{{ resultado.mensaje }}</dd>
               </div>
-              <div v-if="resultado.motivoRechazo" class="resultado-block__row">
+              <div v-if="resultado.motivoRechazo" class="resultado-modal__row">
                 <dt>Motivo</dt>
                 <dd>{{ resultado.motivoRechazo }}</dd>
               </div>
             </dl>
 
-            <button type="button" class="cip-btn cip-btn--secondary" @click="reiniciarFormulario">
+            <button type="button" class="cip-btn cip-btn--primary" @click="cerrarResultadoModal">
               Nueva inscripción
             </button>
-          </section>
+          </div>
         </div>
-      </div>
+      </Teleport>
     </div>
   </section>
 </template>
@@ -309,26 +352,53 @@ function reiniciarFormulario() {
   padding-top: 0.25rem;
 }
 
-.resultado-block {
-  padding-top: 0.25rem;
-  border-top: 1px solid var(--color-border);
+.resultado-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
 }
 
-.resultado-block__head {
+.resultado-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(17, 17, 17, 0.72);
+  cursor: pointer;
+}
+
+.resultado-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: min(480px, 100%);
+  background: var(--cip-white);
+  border: 1px solid var(--color-border);
+  padding: 1.5rem;
+}
+
+.resultado-modal__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.resultado-block__head .cip-section__title {
-  margin-bottom: 0;
-  border-bottom: none;
-  padding-bottom: 0;
+.resultado-modal__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-heading);
 }
 
-.resultado-block__estado {
+.resultado-modal__estado {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -336,26 +406,27 @@ function reiniciarFormulario() {
   color: var(--color-heading);
 }
 
-.resultado-block--rechazado .resultado-block__estado {
+.resultado-modal__panel--rechazado .resultado-modal__estado {
   color: var(--cip-red);
 }
 
-.resultado-block__meta {
+.resultado-modal__meta {
   display: grid;
   gap: 0.85rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
 }
 
-.resultado-block__row dt {
+.resultado-modal__row dt {
   font-size: 0.78rem;
   color: var(--color-text-muted);
   margin-bottom: 0.15rem;
 }
 
-.resultado-block__row dd {
+.resultado-modal__row dd {
   font-size: 0.95rem;
   color: var(--color-heading);
   line-height: 1.5;
+  margin: 0;
 }
 
 @media (max-width: 720px) {
