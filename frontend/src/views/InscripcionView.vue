@@ -11,6 +11,13 @@ const dniColegiado = ref('')
 const nombreColegiado = ref('')
 const dniMenor = ref('')
 const imagen = ref(null)
+const imagenInputRef = ref(null)
+const imagenPreviewUrl = ref('')
+const arrastrandoArchivo = ref(false)
+const errorImagen = ref('')
+
+const TAMANO_MAXIMO_IMAGEN = 5 * 1024 * 1024
+const TIPOS_IMAGEN_PERMITIDOS = ['image/jpeg', 'image/png', 'image/jpg']
 
 const enviando = ref(false)
 const errorFormulario = ref('')
@@ -50,6 +57,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', onEscapeKey)
   document.body.style.overflow = ''
+  revocarPreviewImagen()
 })
 
 async function cargarEstadoEvento() {
@@ -80,12 +88,88 @@ function validarFormulario() {
   if (!imagen.value) {
     return 'Debe adjuntar la imagen del DNI del menor'
   }
+  if (errorImagen.value) {
+    return errorImagen.value
+  }
   return null
+}
+
+function formatearTamano(bytes) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function revocarPreviewImagen() {
+  if (imagenPreviewUrl.value) {
+    URL.revokeObjectURL(imagenPreviewUrl.value)
+    imagenPreviewUrl.value = ''
+  }
+}
+
+function procesarArchivo(archivo) {
+  errorImagen.value = ''
+
+  if (!archivo) {
+    quitarImagen()
+    return
+  }
+
+  if (!TIPOS_IMAGEN_PERMITIDOS.includes(archivo.type)) {
+    errorImagen.value = 'Solo se permiten imágenes JPG o PNG'
+    if (imagenInputRef.value) imagenInputRef.value.value = ''
+    return
+  }
+
+  if (archivo.size > TAMANO_MAXIMO_IMAGEN) {
+    errorImagen.value = 'La imagen no debe superar los 5 MB'
+    if (imagenInputRef.value) imagenInputRef.value.value = ''
+    return
+  }
+
+  revocarPreviewImagen()
+  imagen.value = archivo
+  imagenPreviewUrl.value = URL.createObjectURL(archivo)
+}
+
+function quitarImagen() {
+  revocarPreviewImagen()
+  imagen.value = null
+  errorImagen.value = ''
+  if (imagenInputRef.value) {
+    imagenInputRef.value.value = ''
+  }
+}
+
+function abrirSelectorArchivo() {
+  if (puedeEnviar.value) {
+    imagenInputRef.value?.click()
+  }
+}
+
+function onDragOver(event) {
+  event.preventDefault()
+  if (puedeEnviar.value) {
+    arrastrandoArchivo.value = true
+  }
+}
+
+function onDragLeave() {
+  arrastrandoArchivo.value = false
+}
+
+function onDrop(event) {
+  event.preventDefault()
+  arrastrandoArchivo.value = false
+  if (!puedeEnviar.value) return
+
+  const [archivo] = event.dataTransfer?.files ?? []
+  procesarArchivo(archivo)
 }
 
 function onArchivoSeleccionado(event) {
   const [archivo] = event.target.files
-  imagen.value = archivo ?? null
+  procesarArchivo(archivo ?? null)
 }
 
 async function enviarInscripcion() {
@@ -120,7 +204,7 @@ function reiniciarFormulario() {
   dniColegiado.value = ''
   nombreColegiado.value = ''
   dniMenor.value = ''
-  imagen.value = null
+  quitarImagen()
   errorFormulario.value = ''
   resultado.value = null
 }
@@ -219,16 +303,92 @@ function cerrarResultadoModal() {
                 />
               </div>
 
-              <div class="cip-field">
-                <label for="imagen">Imagen del DNI del menor</label>
+              <div class="cip-field cip-field--file">
+                <span id="imagen-label" class="cip-field__label">Imagen del DNI del menor</span>
+
+                <div
+                  v-if="!imagen"
+                  class="file-drop"
+                  :class="{
+                    'file-drop--active': arrastrandoArchivo,
+                    'file-drop--disabled': !puedeEnviar,
+                  }"
+                  role="button"
+                  tabindex="0"
+                  aria-labelledby="imagen-label"
+                  @click="abrirSelectorArchivo"
+                  @keydown.enter.prevent="abrirSelectorArchivo"
+                  @keydown.space.prevent="abrirSelectorArchivo"
+                  @dragover="onDragOver"
+                  @dragleave="onDragLeave"
+                  @drop="onDrop"
+                >
+                  <svg
+                    class="file-drop__icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="32"
+                    height="32"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 16V4m0 0 4 4m-4-4-4 4" stroke-linecap="round" stroke-linejoin="round" />
+                    <path
+                      d="M4 14v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                  <p class="file-drop__title">Arrastra la imagen aquí o haz clic para seleccionar</p>
+                  <p class="file-drop__hint">JPG o PNG · máximo 5 MB</p>
+                </div>
+
+                <div v-else class="file-preview">
+                  <img
+                    :src="imagenPreviewUrl"
+                    alt="Vista previa del DNI del menor"
+                    class="file-preview__img"
+                  />
+                  <div class="file-preview__body">
+                    <p class="file-preview__name">{{ imagen.name }}</p>
+                    <p class="file-preview__meta">{{ formatearTamano(imagen.size) }}</p>
+                    <div class="file-preview__actions">
+                      <button
+                        type="button"
+                        class="cip-btn cip-btn--secondary cip-btn--small"
+                        :disabled="!puedeEnviar"
+                        @click="abrirSelectorArchivo"
+                      >
+                        Cambiar
+                      </button>
+                      <button
+                        type="button"
+                        class="cip-btn cip-btn--secondary cip-btn--small"
+                        :disabled="!puedeEnviar"
+                        @click="quitarImagen"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <input
+                  ref="imagenInputRef"
                   id="imagen"
                   type="file"
+                  class="file-input-hidden"
                   accept="image/jpeg,image/png,image/jpg"
                   :disabled="!puedeEnviar"
                   @change="onArchivoSeleccionado"
                 />
-                <p class="cip-field__help">JPG o PNG, máximo 5 MB.</p>
+
+                <p v-if="errorImagen" class="file-field__error">{{ errorImagen }}</p>
+                <p v-else-if="!imagen" class="cip-field__help">
+                  Fotografía legible del documento de identidad del menor.
+                </p>
               </div>
 
               <p v-if="errorFormulario" class="cip-form__error">{{ errorFormulario }}</p>
@@ -352,6 +512,133 @@ function cerrarResultadoModal() {
   padding-top: 0.25rem;
 }
 
+.cip-field__label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--color-heading);
+  margin-bottom: 0.45rem;
+}
+
+.file-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.file-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 140px;
+  padding: 1.25rem 1rem;
+  border: 1px dashed var(--color-border);
+  background: var(--cip-white);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  text-align: center;
+}
+
+.file-drop:hover:not(.file-drop--disabled) {
+  border-color: var(--cip-red);
+  background: var(--cip-red-soft);
+}
+
+.file-drop:focus-visible {
+  outline: 2px solid var(--cip-red);
+  outline-offset: 2px;
+}
+
+.file-drop--active {
+  border-color: var(--cip-red);
+  background: var(--cip-red-soft);
+}
+
+.file-drop--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.file-drop__icon {
+  color: var(--color-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.file-drop--active .file-drop__icon,
+.file-drop:hover:not(.file-drop--disabled) .file-drop__icon {
+  color: var(--cip-red);
+}
+
+.file-drop__title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.file-drop__hint {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.file-preview {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 0.85rem;
+  border: 1px solid var(--color-border);
+  background: var(--cip-white);
+}
+
+.file-preview__img {
+  flex-shrink: 0;
+  width: 88px;
+  height: 88px;
+  object-fit: cover;
+  border: 1px solid var(--color-border);
+  background: var(--cip-gray-100);
+}
+
+.file-preview__body {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.file-preview__name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-heading);
+  word-break: break-all;
+}
+
+.file-preview__meta {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.file-preview__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.file-field__error {
+  margin-top: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--cip-red);
+  font-weight: 500;
+}
+
 .resultado-modal {
   position: fixed;
   inset: 0;
@@ -436,6 +723,17 @@ function cerrarResultadoModal() {
 
   .form-row {
     grid-template-columns: 1fr;
+  }
+
+  .file-preview {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .file-preview__img {
+    width: 100%;
+    height: auto;
+    max-height: 160px;
   }
 }
 </style>
