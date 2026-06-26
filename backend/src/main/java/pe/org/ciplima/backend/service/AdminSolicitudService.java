@@ -7,6 +7,7 @@ import pe.org.ciplima.backend.domain.entity.SolicitudInscripcion;
 import pe.org.ciplima.backend.domain.enums.EstadoSolicitud;
 import pe.org.ciplima.backend.dto.AdminMetricasResponse;
 import pe.org.ciplima.backend.dto.InscripcionResponse;
+import pe.org.ciplima.backend.dto.SolicitudHistorialResponse;
 import pe.org.ciplima.backend.dto.SolicitudPendienteResponse;
 import pe.org.ciplima.backend.repository.EventoConfigRepository;
 import pe.org.ciplima.backend.repository.SolicitudRepository;
@@ -57,6 +58,20 @@ public class AdminSolicitudService {
     public List<SolicitudPendienteResponse> listarPendientes() {
         return solicitudRepository.findByEstadoOrderByCreatedAtAsc(EstadoSolicitud.PENDIENTE).stream()
                 .map(this::mapearPendiente)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SolicitudHistorialResponse> listarAprobadas() {
+        return solicitudRepository.findByEstadoOrderByUpdatedAtDesc(EstadoSolicitud.APROBADO).stream()
+                .map(this::mapearHistorial)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SolicitudHistorialResponse> listarRechazadas() {
+        return solicitudRepository.findByEstadoOrderByUpdatedAtDesc(EstadoSolicitud.RECHAZADO).stream()
+                .map(this::mapearHistorial)
                 .toList();
     }
 
@@ -112,6 +127,19 @@ public class AdminSolicitudService {
                 solicitud.getNombreColegiado(),
                 solicitud.getDniMenor(),
                 solicitud.getCreatedAt()
+        );
+    }
+
+    private SolicitudHistorialResponse mapearHistorial(SolicitudInscripcion solicitud) {
+        return new SolicitudHistorialResponse(
+                solicitud.getId(),
+                solicitud.getDniColegiado(),
+                solicitud.getNombreColegiado(),
+                solicitud.getDniMenor(),
+                solicitud.getCreatedAt(),
+                solicitud.getUpdatedAt(),
+                solicitud.getMotivoRechazo(),
+                solicitud.getOrigenRechazo()
         );
     }
 

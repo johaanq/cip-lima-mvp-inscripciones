@@ -9,6 +9,14 @@ export function listarPendientes() {
   return apiFetch('/admin/solicitudes/pendientes')
 }
 
+export function listarAprobadas() {
+  return apiFetch('/admin/solicitudes/aprobadas')
+}
+
+export function listarRechazadas() {
+  return apiFetch('/admin/solicitudes/rechazadas')
+}
+
 export function aprobarSolicitud(id) {
   return apiFetch(`/admin/solicitudes/${id}/aprobar`, {
     method: 'POST',

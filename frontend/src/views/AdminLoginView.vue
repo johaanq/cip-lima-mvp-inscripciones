@@ -44,7 +44,7 @@ async function iniciarSesion() {
         <h1 class="cip-page-title">Acceso administrador</h1>
       </header>
 
-      <div class="cip-card login-card">
+      <section class="cip-section login-section">
         <form class="cip-form" @submit.prevent="iniciarSesion">
           <div class="cip-field">
             <label for="username">Usuario</label>
@@ -74,7 +74,7 @@ async function iniciarSesion() {
             {{ enviando ? 'Ingresando...' : 'Ingresar' }}
           </button>
         </form>
-      </div>
+      </section>
     </div>
   </section>
 </template>

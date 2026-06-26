@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import pe.org.ciplima.backend.dto.InscripcionResponse;
 import pe.org.ciplima.backend.dto.RechazarSolicitudRequest;
+import pe.org.ciplima.backend.dto.SolicitudHistorialResponse;
 import pe.org.ciplima.backend.dto.SolicitudPendienteResponse;
 import pe.org.ciplima.backend.service.AdminSolicitudService;
 import pe.org.ciplima.backend.storage.ArchivoImagenResponse;
@@ -37,6 +38,16 @@ public class AdminSolicitudController {
     @GetMapping("/pendientes")
     public List<SolicitudPendienteResponse> listarPendientes() {
         return adminSolicitudService.listarPendientes();
+    }
+
+    @GetMapping("/aprobadas")
+    public List<SolicitudHistorialResponse> listarAprobadas() {
+        return adminSolicitudService.listarAprobadas();
+    }
+
+    @GetMapping("/rechazadas")
+    public List<SolicitudHistorialResponse> listarRechazadas() {
+        return adminSolicitudService.listarRechazadas();
     }
 
     @PostMapping("/{id}/aprobar")

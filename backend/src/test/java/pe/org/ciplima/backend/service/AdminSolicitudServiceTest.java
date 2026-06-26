@@ -103,6 +103,35 @@ class AdminSolicitudServiceTest {
     }
 
     @Test
+    void listaSolicitudesAprobadas() {
+        SolicitudInscripcion solicitud = SolicitudInscripcion.crearPendiente(
+                "12345678", "Juan Perez", "11223344", "solicitudes/uuid.jpg"
+        );
+        solicitud.aprobar();
+
+        when(solicitudRepository.findByEstadoOrderByUpdatedAtDesc(EstadoSolicitud.APROBADO))
+                .thenReturn(List.of(solicitud));
+
+        assertEquals(1, adminSolicitudService.listarAprobadas().size());
+    }
+
+    @Test
+    void listaSolicitudesRechazadas() {
+        SolicitudInscripcion solicitud = SolicitudInscripcion.crearRechazada(
+                "87654321", "Maria Lopez", "22334455", "solicitudes/uuid2.jpg",
+                "Personal administrativo", pe.org.ciplima.backend.domain.enums.OrigenRechazo.AUTOMATICO
+        );
+
+        when(solicitudRepository.findByEstadoOrderByUpdatedAtDesc(EstadoSolicitud.RECHAZADO))
+                .thenReturn(List.of(solicitud));
+
+        var rechazadas = adminSolicitudService.listarRechazadas();
+
+        assertEquals(1, rechazadas.size());
+        assertEquals("AUTOMATICO", rechazadas.get(0).origenRechazo().name());
+    }
+
+    @Test
     void apruebaSolicitudPendienteConCupoDisponible() {
         SolicitudInscripcion solicitud = SolicitudInscripcion.crearPendiente(
                 "12345678", "Juan Perez", "11223344", "solicitudes/uuid.jpg"

@@ -122,7 +122,7 @@ function reiniciarFormulario() {
 
       <div v-else-if="estadoEvento" class="inscripcion-grid">
         <aside class="evento-aside">
-          <h2 class="evento-aside__title">Datos del evento</h2>
+          <h2 class="cip-section__title">Datos del evento</h2>
           <dl class="evento-aside__list">
             <div class="evento-aside__row">
               <dt>Sede</dt>
@@ -144,8 +144,8 @@ function reiniciarFormulario() {
             El evento ha alcanzado su aforo máximo. No se aceptan nuevas inscripciones.
           </div>
 
-          <div v-else class="cip-card">
-            <h2 class="form-title">Formulario de inscripción</h2>
+          <section v-else class="cip-section">
+            <h2 class="cip-section__title">Formulario de inscripción</h2>
 
             <form class="cip-form" @submit.prevent="enviarInscripcion">
               <div class="form-row">
@@ -211,27 +211,40 @@ function reiniciarFormulario() {
                 </button>
               </div>
             </form>
-          </div>
+          </section>
 
-          <div
+          <section
             v-if="resultado"
-            class="cip-panel"
+            class="cip-section resultado-block"
             :class="{
-              'cip-panel--success': resultado.estado === 'PENDIENTE' || resultado.estado === 'APROBADO',
-              'cip-panel--error': resultado.estado === 'RECHAZADO',
+              'resultado-block--ok': resultado.estado === 'PENDIENTE' || resultado.estado === 'APROBADO',
+              'resultado-block--rechazado': resultado.estado === 'RECHAZADO',
             }"
           >
-            <h2 class="form-title">Resultado</h2>
-            <p><strong>ID:</strong> {{ resultado.id }}</p>
-            <p><strong>Estado:</strong> {{ resultado.estado }}</p>
-            <p>{{ resultado.mensaje }}</p>
-            <p v-if="resultado.motivoRechazo">
-              <strong>Motivo:</strong> {{ resultado.motivoRechazo }}
-            </p>
+            <div class="resultado-block__head">
+              <h2 class="cip-section__title">Resultado</h2>
+              <span class="resultado-block__estado">{{ resultado.estado }}</span>
+            </div>
+
+            <dl class="resultado-block__meta">
+              <div class="resultado-block__row">
+                <dt>ID</dt>
+                <dd>{{ resultado.id }}</dd>
+              </div>
+              <div class="resultado-block__row">
+                <dt>Mensaje</dt>
+                <dd>{{ resultado.mensaje }}</dd>
+              </div>
+              <div v-if="resultado.motivoRechazo" class="resultado-block__row">
+                <dt>Motivo</dt>
+                <dd>{{ resultado.motivoRechazo }}</dd>
+              </div>
+            </dl>
+
             <button type="button" class="cip-btn cip-btn--secondary" @click="reiniciarFormulario">
               Nueva inscripción
             </button>
-          </div>
+          </section>
         </div>
       </div>
     </div>
@@ -257,20 +270,11 @@ function reiniciarFormulario() {
 }
 
 .evento-aside {
-  background: var(--cip-white);
-  border: 1px solid var(--color-border);
-  padding: 1.25rem;
+  padding-top: 0.15rem;
 }
 
-.evento-aside__title {
-  font-size: 0.85rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-heading);
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--color-border);
+.evento-aside .cip-section__title {
+  margin-bottom: 0.85rem;
 }
 
 .evento-aside__list {
@@ -292,14 +296,7 @@ function reiniciarFormulario() {
 
 .inscripcion-main {
   display: grid;
-  gap: 1rem;
-}
-
-.form-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--color-heading);
-  margin-bottom: 1.25rem;
+  gap: 2rem;
 }
 
 .form-row {
@@ -310,6 +307,55 @@ function reiniciarFormulario() {
 
 .form-actions {
   padding-top: 0.25rem;
+}
+
+.resultado-block {
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.resultado-block__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.resultado-block__head .cip-section__title {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.resultado-block__estado {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-heading);
+}
+
+.resultado-block--rechazado .resultado-block__estado {
+  color: var(--cip-red);
+}
+
+.resultado-block__meta {
+  display: grid;
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.resultado-block__row dt {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.15rem;
+}
+
+.resultado-block__row dd {
+  font-size: 0.95rem;
+  color: var(--color-heading);
+  line-height: 1.5;
 }
 
 @media (max-width: 720px) {

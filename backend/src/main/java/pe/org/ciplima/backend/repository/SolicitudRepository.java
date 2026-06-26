@@ -11,6 +11,8 @@ public interface SolicitudRepository extends JpaRepository<SolicitudInscripcion,
 
     List<SolicitudInscripcion> findByEstadoOrderByCreatedAtAsc(EstadoSolicitud estado);
 
+    List<SolicitudInscripcion> findByEstadoOrderByUpdatedAtDesc(EstadoSolicitud estado);
+
     long countByEstado(EstadoSolicitud estado);
 
     @Query("SELECT COUNT(s) FROM SolicitudInscripcion s")

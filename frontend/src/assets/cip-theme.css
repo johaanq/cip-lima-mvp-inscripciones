@@ -10,15 +10,9 @@
   --cip-gray-100: #f3f4f6;
   --cip-gold: #c9a227;
   --cip-white: #ffffff;
-  --cip-success-bg: #ecfdf3;
-  --cip-success-border: #86efac;
-  --cip-success-text: #166534;
-  --cip-warning-bg: #fff7ed;
-  --cip-warning-border: #fdba74;
-  --cip-warning-text: #9a3412;
-  --cip-error-bg: #fef2f2;
-  --cip-error-border: #fca5a5;
-  --cip-error-text: #991b1b;
+  --cip-success-accent: #166534;
+  --cip-warning-accent: #92400e;
+  --cip-error-accent: var(--cip-red);
 
   --color-background: var(--cip-gray-100);
   --color-background-soft: var(--cip-white);
@@ -94,22 +88,96 @@ textarea {
   margin-top: 0.35rem;
 }
 
+.cip-section {
+  margin-bottom: 2rem;
+}
+
+.cip-section__title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-heading);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cip-notice {
+  margin-bottom: 1.25rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--color-border);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.cip-notice--info {
+  border-left-color: var(--cip-gray-500);
+}
+
+.cip-notice--success {
+  border-left-color: var(--cip-black);
+}
+
+.cip-notice--warning {
+  border-left-color: var(--cip-gray-700);
+}
+
+.cip-notice--error {
+  border-left-color: var(--cip-red);
+}
+
+.cip-notice .cip-btn {
+  margin-top: 0.75rem;
+}
+
+.cip-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem 2.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cip-metric span {
+  display: block;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin-bottom: 0.2rem;
+}
+
+.cip-metric strong {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.cip-metric--highlight strong {
+  color: var(--cip-red);
+}
+
+/* Legacy: evitar cajas tipo card salvo casos puntuales */
 .cip-card {
-  background: var(--cip-white);
-  border: 1px solid var(--color-border);
-  padding: 1.5rem;
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
 .cip-card + .cip-card {
-  margin-top: 1rem;
+  margin-top: 0;
 }
 
 .cip-panel {
-  padding: 1rem 1.25rem;
-  border-radius: 4px;
-  border: 1px solid var(--color-border);
-  margin-bottom: 1rem;
-  background: var(--cip-white);
+  padding: 0 0 0 0.75rem;
+  border: none;
+  border-left: 3px solid var(--color-border);
+  border-radius: 0;
+  margin-bottom: 1.25rem;
+  background: transparent;
+  color: var(--color-text);
 }
 
 .cip-panel h2,
@@ -120,38 +188,34 @@ textarea {
 }
 
 .cip-panel--info {
-  background: var(--cip-gray-100);
+  border-left-color: var(--cip-gray-500);
 }
 
 .cip-panel--success {
-  background: var(--cip-success-bg);
-  border-color: var(--cip-success-border);
-  color: var(--cip-success-text);
+  border-left-color: var(--cip-black);
 }
 
 .cip-panel--warning {
-  background: var(--cip-warning-bg);
-  border-color: var(--cip-warning-border);
-  color: var(--cip-warning-text);
+  border-left-color: var(--cip-gray-700);
 }
 
 .cip-panel--error {
-  background: var(--cip-error-bg);
-  border-color: var(--cip-error-border);
-  color: var(--cip-error-text);
+  border-left-color: var(--cip-red);
 }
 
 .cip-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem 2.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .cip-stat {
-  background: var(--cip-white);
-  border: 1px solid var(--color-border);
-  padding: 1rem;
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
 .cip-stat span {
@@ -212,8 +276,10 @@ textarea {
 }
 
 .cip-form__error {
-  color: var(--cip-error-text);
+  color: var(--cip-red);
   font-weight: 500;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--cip-red);
 }
 
 .cip-btn {
@@ -273,7 +339,7 @@ textarea {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.92rem;
-  background: var(--cip-white);
+  background: transparent;
 }
 
 .cip-table th,
