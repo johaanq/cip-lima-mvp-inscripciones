@@ -1,6 +1,6 @@
 # MVP Inscripciones — Evento Día del Padre (CIP Lima)
 
-Monorepo con backend REST, frontend Vue 3 y orquestación Docker para gestionar inscripciones al evento institucional del Consejo Departamental de Lima. El foco del reto es la **correctitud de las reglas de negocio**, la **estabilidad del flujo de datos**, la **concurrencia de cupos** y las **decisiones arquitectónicas** documentadas — no la estética de la interfaz.
+Monorepo con backend REST, frontend Vue 3 y orquestación Docker para gestionar inscripciones al evento institucional del Consejo Departamental de Lima. Prioricé la correctitud de las reglas de negocio, la consistencia del flujo de datos y el manejo de concurrencia en el cupo de aforo.
 
 Repositorio: [github.com/johaanq/cip-lima-mvp-inscripciones](https://github.com/johaanq/cip-lima-mvp-inscripciones)
 
@@ -28,7 +28,7 @@ docker compose down -v
 docker compose up --build
 ```
 
-El backend espera a que PostgreSQL, MinIO y el mock de colegiados estén saludables antes de arrancar. No se requieren pasos manuales adicionales.
+El backend espera a que PostgreSQL, MinIO y el mock de colegiados estén saludables antes de arrancar. No hace falta ningún paso manual adicional.
 
 ---
 
@@ -43,7 +43,7 @@ El backend espera a que PostgreSQL, MinIO y el mock de colegiados estén saludab
 | MinIO consola | http://localhost:9001 | Usuario/clave en `.env.example` |
 | Mock colegiados | Red interna Docker (`colegiados-mock:3001`) | No expuesto al host |
 
-El frontend en nginx proxya `/api` hacia el backend, por lo que las peticiones del navegador pueden usar rutas relativas `/api/...`.
+El frontend en nginx proxya `/api` hacia el backend, así que las peticiones del navegador pueden usar rutas relativas `/api/...`.
 
 ---
 
@@ -73,43 +73,29 @@ El frontend en nginx proxya `/api` hacia el backend, por lo que las peticiones d
 | Secret key | `minioadmin` |
 | Bucket | `inscripciones-imagenes` |
 
-Todas las variables están documentadas en `.env.example`. **No commitear** el archivo `.env` con secretos reales.
+Todas las variables están documentadas en `.env.example`. No commitear el archivo `.env` con secretos reales.
 
 ---
 
 ## Arquitectura del sistema
 
+Documenté la arquitectura con diagramas C4 (Structurizr) y secuencia UML (PlantUML). Las capturas están en `docs/diagrams/`.
+
+### Diagrama de contexto
+
+![Diagrama de contexto](docs/diagrams/SystemContext.png)
+
 ### Vista de contenedores
 
-```text
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Frontend Vue   │────▶│  Spring Boot API │────▶│   PostgreSQL    │
-│  (nginx :80)    │     │  (:8080)         │     │   (interno)     │
-└─────────────────┘     └────────┬─────────┘     └─────────────────┘
-                                 │
-                    ┌────────────┼────────────┐
-                    ▼            ▼            ▼
-           ┌──────────────┐ ┌──────────┐ ┌──────────────┐
-           │ json-server  │ │  MinIO   │ │ Swagger UI   │
-           │ colegiados   │ │ (S3 API) │ │ (en backend) │
-           └──────────────┘ └──────────┘ └──────────────┘
-```
+![Diagrama de contenedores](docs/diagrams/Containers.png)
 
-### Arquitectura de software (backend)
+### Componentes del backend
 
-Se adoptó **arquitectura en capas** en lugar de DDD completo: el dominio es acotado (inscripción, cupo, elegibilidad) y el tiempo del reto prioriza claridad y transacciones correctas sobre ceremonia de agregados o eventos de dominio.
+![Componentes del backend](docs/diagrams/BackendComponents.png)
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│  Presentación — Controllers REST + DTOs                 │
-├─────────────────────────────────────────────────────────┤
-│  Aplicación — Services (@Transactional)                 │
-├─────────────────────────────────────────────────────────┤
-│  Dominio ligero — Entidades JPA, enums, reglas puras  │
-├─────────────────────────────────────────────────────────┤
-│  Infraestructura — Repositorios, HTTP client, MinIO     │
-└─────────────────────────────────────────────────────────┘
-```
+Organicé el backend en capas en lugar de DDD completo: el dominio es acotado (inscripción, cupo, elegibilidad) y me interesaba más tener transacciones claras y código fácil de seguir que montar agregados o bounded contexts que no aportaban mucho en este alcance.
+
+Capas: **Controllers + DTOs** → **Services (@Transactional)** → **Domain (entidades JPA, enums)** → **Infraestructura (repos, HTTP client, MinIO)**.
 
 ### Estructura del monorepo
 
@@ -123,32 +109,33 @@ cip-lima-mvp-inscripciones/
 └── README.md
 ```
 
-### Patrones aplicados
+### Patrones que usé
 
-| Patrón | Implementación | Propósito |
-|--------|----------------|-----------|
-| Layered Architecture | Paquetes `controller`, `service`, `domain`, `repository` | Separación de responsabilidades |
+| Patrón | Dónde | Para qué |
+|--------|-------|----------|
+| Layered Architecture | Paquetes `controller`, `service`, `domain`, `repository` | Separar responsabilidades |
 | Repository | `SolicitudRepository`, `EventoConfigRepository` | Abstraer persistencia |
 | Service Layer | `InscripcionService`, `AdminSolicitudService` | Casos de uso y transacciones |
 | DTO | Records en `dto/` | No exponer entidades JPA en la API |
 | Gateway / Client | `ColegiadosApiClient` | Aislar la API externa simulada |
-| Strategy (ligero) | `ColegiadoValidationService` + reglas independientes | Reglas de elegibilidad extensibles |
-| Adapter | AWS SDK S3 apuntando a MinIO | Storage compatible con S3 on-premise |
+| Strategy (ligero) | `ColegiadoValidationService` | Reglas de elegibilidad extensibles |
+| Adapter | AWS SDK S3 → MinIO | Mismo patrón que S3 en producción |
 
-### Flujo de datos principal
+### Flujo de inscripción pública
 
-**Inscripción pública**
+![Secuencia de inscripción](docs/diagrams/sequence-inscripcion.png)
 
 1. El frontend consulta `GET /api/evento/estado` para verificar aforo.
 2. El usuario envía `POST /api/inscripciones` (multipart: DNIs, nombre, imagen).
 3. El backend valida aforo, sube la imagen a MinIO y consulta el mock de colegiados.
 4. `ColegiadoValidationService` evalúa las reglas; resultado `PENDIENTE` o `RECHAZADO` (automático) persistido en PostgreSQL.
 
-**Aprobación administrativa**
+### Flujo de aprobación administrativa
 
-1. Admin autenticado con JWT consulta métricas y pendientes.
-2. Al aprobar, en **una sola transacción**: incremento condicional de cupo + cambio de estado a `APROBADO` + log de invitación simulado.
-3. Al rechazar, observación obligatoria, estado `RECHAZADO` con `origen_rechazo=ADMIN` + log de alerta simulado.
+1. El admin inicia sesión y obtiene JWT.
+2. Consulta métricas y solicitudes pendientes.
+3. Al aprobar, en **una sola transacción**: incremento condicional de cupo + estado `APROBADO` + log de invitación simulado.
+4. Al rechazar, observación obligatoria, estado `RECHAZADO` con `origen_rechazo=ADMIN` + log de alerta simulado.
 
 ---
 
@@ -158,39 +145,39 @@ cip-lima-mvp-inscripciones/
 |------|----------|--------|
 | Backend | Java 17 + Spring Boot 3.5.16 | Transacciones declarativas, ecosistema maduro, capas claras |
 | Base de datos | PostgreSQL 16 | ACID, constraints, adecuada para concurrencia de cupos |
-| Migraciones | Flyway (`V1__init_schema.sql`) | Persistencia formal en el ciclo de vida (requerimiento del reto) |
-| Mock colegiados | json-server en Docker | Sugerido en la especificación; cero código custom |
-| Imágenes | MinIO (API S3) | Object storage on-premise; migración a AWS S3 cambiando endpoint |
+| Migraciones | Flyway (`V1__init_schema.sql`) | Esquema versionado desde el arranque |
+| Mock colegiados | json-server en Docker | Lo sugería la especificación; sin código custom |
+| Imágenes | MinIO (API S3) | Object storage on-premise; en producción solo cambia el endpoint |
 | Seguridad admin | Spring Security + JWT stateless | Protección de `/api/admin/**` sin sesión en servidor |
-| Documentación API | SpringDoc OpenAPI 3 | Contrato visible para evaluadores; esquema Bearer JWT |
+| Documentación API | SpringDoc OpenAPI 3 | Contrato visible; esquema Bearer JWT |
 | Frontend | Vue 3 + Vite | SPA mínima: formulario + dashboard |
 | Orquestación | Docker Compose | Un comando levanta todo el stack |
 
 ---
 
-## Registros de decisiones arquitectónicas (ADR)
+## Decisiones arquitectónicas (ADR)
 
-### ADR-001: Arquitectura en capas en lugar de DDD completo
+### ADR-001: Capas en lugar de DDD completo
 
-**Contexto:** Reto de 8 horas con dominio pequeño (inscripción, cupo, validación de colegiado).
+**Contexto:** Dominio pequeño (inscripción, cupo, validación de colegiado) y tiempo acotado.
 
-**Decisión:** Capas (controller → service → domain/repository → infra) con reglas de negocio en servicios y métodos de entidad, sin agregados ni bounded contexts.
+**Decisión:** Capas (controller → service → domain/repository → infra) con reglas en servicios y métodos de entidad.
 
-**Consecuencias:** Menor overhead; README y código legibles para el evaluador. Si el dominio crece, se pueden extraer agregados más adelante.
+**Consecuencias:** Menos overhead y código directo. Si el dominio crece, se pueden extraer agregados después.
 
 ### ADR-002: Persistir auto-rechazos como `RECHAZADO`
 
 **Contexto:** Una inscripción no elegible puede descartarse o persistirse.
 
-**Decisión:** Toda solicitud enviada se persiste. Los rechazos automáticos quedan en `RECHAZADO` con `origen_rechazo=AUTOMATICO` y motivo explícito.
+**Decisión:** Toda solicitud enviada se guarda. Los rechazos automáticos quedan en `RECHAZADO` con `origen_rechazo=AUTOMATICO` y motivo explícito.
 
-**Consecuencias:** Métricas del dashboard coherentes, trazabilidad auditable y flujo de datos estable (siempre hay registro en BD).
+**Consecuencias:** Métricas del dashboard coherentes, trazabilidad y flujo de datos estable (siempre hay registro en BD).
 
 ### ADR-003: Concurrencia de cupos con UPDATE condicional
 
-**Contexto:** Varios administradores podrían aprobar simultáneamente con cupo limitado (10 plazas).
+**Contexto:** Varios administradores podrían aprobar a la vez con cupo limitado (10 plazas).
 
-**Decisión:** En la misma transacción de aprobación, ejecutar:
+**Decisión:** En la misma transacción de aprobación:
 
 ```sql
 UPDATE evento_config
@@ -202,29 +189,29 @@ Si `rows affected = 0`, no se aprueba la solicitud (HTTP 409). El cupo solo incr
 
 **Consecuencias:** Evita sobreventa sin bloqueo pesimista explícito; suficiente para el volumen del MVP.
 
-### ADR-004: MinIO en lugar de filesystem o AWS S3 directo
+### ADR-004: MinIO para imágenes
 
-**Contexto:** Imágenes del DNI del menor deben almacenarse fuera de la BD.
+**Contexto:** Las imágenes del DNI del menor no deben ir en la BD.
 
-**Decisión:** MinIO en Docker con AWS SDK (path-style). Clave del objeto en columna `imagen_object_key`.
+**Decisión:** MinIO en Docker con AWS SDK (path-style). La clave del objeto va en `imagen_object_key`.
 
-**Consecuencias:** Mismo patrón que S3 en producción; el bucket se crea al arranque del backend si no existe.
+**Consecuencias:** Mismo patrón que S3 en producción; el bucket se crea al arranque si no existe.
 
 ### ADR-005: JWT en memoria (frontend) y Spring Security (backend)
 
-**Contexto:** Panel admin requiere autenticación stateless.
+**Contexto:** El panel admin necesita autenticación stateless.
 
-**Decisión:** Login vía `POST /api/auth/login`; token JWT solo en memoria del SPA (no `localStorage`). Filtro JWT en Spring Security para rutas `/api/admin/**`.
+**Decisión:** Login vía `POST /api/auth/login`; token JWT solo en memoria del SPA (no `localStorage`). Filtro JWT en Spring Security para `/api/admin/**`.
 
-**Consecuencias:** Reduce riesgo de XSS persistente; el token se pierde al cerrar pestaña (aceptable para MVP admin).
+**Consecuencias:** Menor riesgo de XSS persistente; el token se pierde al cerrar pestaña, aceptable para este MVP.
 
 ### ADR-006: SpringDoc OpenAPI con Bearer auth
 
-**Contexto:** Evaluadores necesitan probar endpoints admin sin leer todo el código.
+**Contexto:** Quería poder probar endpoints admin sin recorrer todo el código.
 
 **Decisión:** SpringDoc en `/swagger-ui/index.html` con esquema `bearerAuth` en operaciones administrativas.
 
-**Consecuencias:** Documentación viva alineada al código; facilita la revisión técnica.
+**Consecuencias:** Documentación alineada al código y fácil de probar desde el navegador.
 
 ---
 
@@ -260,15 +247,9 @@ Si `rows affected = 0`, no se aprueba la solicitud (HTTP 409). El cupo solo incr
 
 ### Máquina de estados
 
-```text
-                    ┌──────────────┐
-   inscripción ────▶│  PENDIENTE   │──── admin aprueba ────▶ APROBADO
-   (elegible)        └──────┬───────┘
-                            │
-                            │ admin rechaza (observación obligatoria)
-                            ▼
-                        RECHAZADO ◀──── auto-rechazo (reglas API colegiados)
-```
+![Estados de solicitud_inscripcion](docs/diagrams/state-solicitud.png)
+
+Transiciones: inscripción elegible → `PENDIENTE`; auto-rechazo → `RECHAZADO`; admin aprueba → `APROBADO`; admin rechaza → `RECHAZADO` con observación obligatoria.
 
 ---
 
@@ -276,7 +257,7 @@ Si `rows affected = 0`, no se aprueba la solicitud (HTTP 409). El cupo solo incr
 
 ### Bloqueo en nuevas inscripciones
 
-Antes de registrar, `InscripcionService` consulta `evento_config`. Si `cupo_ocupado >= cupo_maximo`, lanza `AforoCompletoException` (HTTP 409). Las solicitudes en estado `PENDIENTE` no consumen cupo hasta ser aprobadas.
+Antes de registrar, `InscripcionService` consulta `evento_config`. Si `cupo_ocupado >= cupo_maximo`, lanza `AforoCompletoException` (HTTP 409). Las solicitudes en `PENDIENTE` no consumen cupo hasta ser aprobadas.
 
 ### Aprobación concurrente
 
@@ -294,7 +275,7 @@ aprobar(solicitudId):
   notificarInvitacion(solicitud)  // log simulado
 ```
 
-Implementación JPA equivalente en `EventoConfigRepository.incrementarCupoSiDisponible`.
+Implementación en `EventoConfigRepository.incrementarCupoSiDisponible`.
 
 ---
 
@@ -308,7 +289,7 @@ Evaluadas contra la API mock de colegiados al momento de inscribirse:
 | Estado habilitado | `habilitado: true` | Si false → `RECHAZADO` automático |
 | Pertenencia territorial | `consejo_departamental` = sede del evento (`Lima`) | Si distinto → `RECHAZADO` automático |
 | Restricción laboral | `es_administrativo: false` | Si true → `RECHAZADO` automático |
-| Aforo disponible | `cupo_ocupado < cupo_maximo` | Si lleno → error HTTP 409 (no persiste) |
+| Aforo disponible | `cupo_ocupado < cupo_maximo` | Si lleno → HTTP 409 (no persiste) |
 | Elegible | Pasa todas las reglas | `PENDIENTE` (revisión admin) |
 
 **Acciones del administrador (solo sobre `PENDIENTE`):**
@@ -320,9 +301,9 @@ Evaluadas contra la API mock de colegiados al momento de inscribirse:
 
 ## API mock de colegiados
 
-Servicio `colegiados-mock` (json-server) expone `GET /colegiados?dni={dni}` desde `mock/db.json`.
+El servicio `colegiados-mock` (json-server) expone `GET /colegiados?dni={dni}` desde `mock/db.json`.
 
-El backend (`ColegiadosApiClient`) consulta el listado filtrado y selecciona el registro coincidente. Esto evita depender de rutas custom de json-server.
+El backend (`ColegiadosApiClient`) consulta el listado filtrado y toma el registro coincidente. Así no dependo de rutas custom de json-server.
 
 URL interna Docker: `http://colegiados-mock:3001` (variable `COLEGIADOS_API_URL`).
 
@@ -409,7 +390,7 @@ cd backend
 
 ## Historial Git
 
-El reto exige commits **atómicos y descriptivos** (mismo peso que el código). Ejemplos del historial:
+Fui commiteando en piezas pequeñas y atómicas, cada una con un propósito claro:
 
 ```text
 feat(backend): proyecto Spring Boot inicial...
@@ -425,8 +406,6 @@ feat(frontend): login, dashboard y diseño institucional
 docs: README con arquitectura, persistencia y concurrencia
 ```
 
-Cada commit representa una pieza lógica terminada, no un dump masivo al final.
-
 ---
 
 ## Limitaciones y mejoras futuras
@@ -440,14 +419,14 @@ Cada commit representa una pieza lógica terminada, no un dump masivo al final.
 
 ---
 
-## Atributos de calidad priorizados
+## Atributos de calidad
 
-| Atributo | Prioridad | Cómo se aborda |
+| Atributo | Prioridad | Cómo lo abordé |
 |----------|-----------|----------------|
 | Correctitud / reglas de negocio | Crítica | Reglas aisladas, auto-rechazos persistidos, constraints SQL |
 | Consistencia de datos | Crítica | Transacciones `@Transactional`, update condicional de cupo |
-| Trazabilidad | Alta | Flyway, `origen_rechazo`, timestamps, historial Git |
-| Mantenibilidad | Alta | Capas, ADRs, OpenAPI, README |
+| Trazabilidad | Alta | Flyway, `origen_rechazo`, timestamps, commits atómicos |
+| Mantenibilidad | Alta | Capas, ADRs, OpenAPI |
 | Seguridad | Alta | JWT, BCrypt, CORS, uploads validados |
 | Disponibilidad | Media | Healthchecks en Docker Compose |
 | Escalabilidad | Documentada | API stateless; BD y storage desacoplados |

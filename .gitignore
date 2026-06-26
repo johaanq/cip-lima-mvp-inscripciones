@@ -1,3 +1,7 @@
 .env
 *.log
 .DS_Store
+
+# Fuentes de diagramas (solo local); las capturas PNG sí van al repo
+docs/diagrams/**
+!docs/diagrams/*.png
