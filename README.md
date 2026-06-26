@@ -40,10 +40,14 @@ La logica de negocio, transacciones y pruebas unitarias viven en el backend. El 
 
 ## Arranque en un comando
 
+Copia la configuracion de entorno antes de levantar el stack (obligatorio):
+
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
+
+Todas las variables de servicios y puertos viven en `.env`. El archivo `docker-compose.yml` solo define servicios, dependencias y el mapeo de puertos; no duplica valores por defecto.
 
 Para reiniciar desde cero (incluye volumenes de datos):
 
