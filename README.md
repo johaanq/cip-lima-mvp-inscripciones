@@ -93,7 +93,7 @@ El frontend en nginx proxya `/api` hacia el backend, asi que las peticiones del 
 | Usuario | admin |
 | Contraseña | admin123 |
 
-El usuario admin se crea en PostgreSQL al primer arranque si la tabla admin_usuario esta vacia (contraseña hasheada con BCrypt). No va en `.env`.
+El usuario admin se crea en PostgreSQL al primer arranque si la tabla admin_usuario esta vacia (contraseña hasheada con BCrypt).
 
 ### MinIO
 
